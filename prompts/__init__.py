@@ -1,0 +1,28 @@
+"""
+Inicialización del módulo de prompts
+"""
+
+from .system_prompt import (
+    SYSTEM_PROMPT,
+    IOT_ANALYSIS_PROMPT,
+    DEVICE_STATUS_PROMPT,
+    ERROR_HANDLING_PROMPT
+)
+
+from .query_prompts import (
+    SENSOR_DATA_QUERY_PROMPT,
+    TREND_ANALYSIS_PROMPT,
+    ALERT_MANAGEMENT_PROMPT,
+    DEVICE_HEALTH_PROMPT
+)
+
+__all__ = [
+    'SYSTEM_PROMPT',
+    'IOT_ANALYSIS_PROMPT',
+    'DEVICE_STATUS_PROMPT',
+    'ERROR_HANDLING_PROMPT',
+    'SENSOR_DATA_QUERY_PROMPT',
+    'TREND_ANALYSIS_PROMPT',
+    'ALERT_MANAGEMENT_PROMPT',
+    'DEVICE_HEALTH_PROMPT'
+]
