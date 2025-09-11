@@ -67,7 +67,7 @@ class SimpleCloudIoTAgent:
             logger.error(f"Error inicializando agente: {e}")
             return False
 
-    async def process_query(self, user_query: str) -> str:
+    async def process_query(self, user_query: str) -> Dict[str, Any]:
         """
         Procesar consulta del usuario de forma simplificada.
         
@@ -75,7 +75,7 @@ class SimpleCloudIoTAgent:
             user_query: Consulta del usuario
             
         Returns:
-            Respuesta generada
+            Respuesta estructurada con metadata
         """
         try:
             if not self.initialized:
@@ -91,17 +91,50 @@ class SimpleCloudIoTAgent:
             analysis_result = self._analyze_sensor_data(sensor_data, query_analysis)
             
             # 4. Generar respuesta
-            response = await self._generate_response(
+            response_text = await self._generate_response(
                 user_query, 
                 analysis_result, 
                 sensor_data
             )
             
-            return response
+            # 5. Estructurar respuesta completa
+            return {
+                "success": True,
+                "response": response_text,
+                "data_summary": {
+                    "total_records": analysis_result.get('total_records', 0),
+                    "sensors": list(analysis_result.get('sensors_summary', {}).keys()),
+                    "devices": analysis_result.get('devices_found', [])
+                },
+                "model_used": self.groq_model if self.groq_integration else "fallback",
+                "execution_status": "completed",
+                "verification": {
+                    "data_source": "jetson_api" if self.jetson_connector else "demo",
+                    "confidence": 85 if analysis_result.get('total_records', 0) > 0 else 50,
+                    "timestamp": datetime.now().isoformat()
+                },
+                "metadata": {
+                    "confidence": 85 if analysis_result.get('total_records', 0) > 0 else 50,
+                    "data_source": "jetson_api" if self.jetson_connector else "demo",
+                    "processing_time": "< 2s"
+                }
+            }
             
         except Exception as e:
             logger.error(f"Error procesando consulta: {e}")
-            return f"❌ Error procesando consulta: {str(e)}"
+            return {
+                "success": False,
+                "error": str(e),
+                "response": f"❌ Error procesando consulta: {str(e)}",
+                "data_summary": {
+                    "total_records": 0,
+                    "sensors": [],
+                    "devices": []
+                },
+                "model_used": "N/A",
+                "execution_status": "error",
+                "verification": {}
+            }
 
     def _analyze_query(self, query: str) -> Dict[str, Any]:
         """Análisis simplificado de la consulta."""
@@ -265,6 +298,65 @@ Responde de forma concisa y técnicamente precisa."""
             response += "⚠️ No se encontraron datos de sensores disponibles."
         
         return response
+
+    async def health_check(self) -> Dict[str, Any]:
+        """
+        Verificar el estado de salud del sistema.
+        
+        Returns:
+            Información del estado del sistema
+        """
+        try:
+            health_status = {
+                "timestamp": datetime.now().isoformat(),
+                "overall_status": "healthy",
+                "groq_status": "unknown",
+                "jetson_status": "unknown",
+                "components": {}
+            }
+            
+            # Verificar Groq
+            try:
+                if self.groq_integration:
+                    # Test simple de Groq
+                    test_response = self.groq_integration.generate_response(
+                        "Responde solo: OK", 
+                        model=self.groq_model
+                    )
+                    health_status["groq_status"] = "success" if test_response else "error"
+                else:
+                    health_status["groq_status"] = "demo_mode"
+            except Exception as e:
+                health_status["groq_status"] = f"error: {str(e)}"
+                health_status["overall_status"] = "degraded"
+            
+            # Verificar Jetson API
+            try:
+                if self.jetson_connector:
+                    devices = self.jetson_connector.get_devices()
+                    health_status["jetson_status"] = "healthy" if devices else "no_data"
+                    health_status["components"]["jetson_devices"] = len(devices) if devices else 0
+                else:
+                    health_status["jetson_status"] = "not_configured"
+            except Exception as e:
+                health_status["jetson_status"] = f"error: {str(e)}"
+                health_status["overall_status"] = "degraded"
+            
+            # Determinar estado general
+            if health_status["groq_status"].startswith("error") and health_status["jetson_status"].startswith("error"):
+                health_status["overall_status"] = "error"
+            elif "error" in health_status["groq_status"] or "error" in health_status["jetson_status"]:
+                health_status["overall_status"] = "degraded"
+            
+            return health_status
+            
+        except Exception as e:
+            logger.error(f"Error en health check: {e}")
+            return {
+                "timestamp": datetime.now().isoformat(),
+                "overall_status": "error",
+                "error": str(e)
+            }
 
     def _get_demo_data(self) -> List[Dict[str, Any]]:
         """Generar datos demo para testing."""

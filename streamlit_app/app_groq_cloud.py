@@ -221,28 +221,36 @@ async def process_user_query(query: str) -> dict:
             return {
                 "success": False,
                 "error": "Agente no inicializado",
-                "response": "Por favor inicializa el agente primero."
+                "response": "Por favor inicializa el agente primero.",
+                "data_summary": {
+                    "total_records": 0,
+                    "sensors": [],
+                    "devices": []
+                },
+                "model_used": "N/A",
+                "execution_status": "not_initialized",
+                "verification": {}
             }
         
+        # El agente ahora devuelve directamente un diccionario estructurado
         response = await st.session_state.agent.process_query(query)
         
-        # El agente simple devuelve string, convertir a formato dict esperado
-        return {
-            "success": True,
-            "response": response,
-            "metadata": {
-                "confidence": 85,
-                "data_source": "jetson_api",
-                "processing_time": "< 2s"
-            }
-        }
+        return response
         
     except Exception as e:
         logger.error(f"Error procesando consulta: {e}")
         return {
             "success": False,
             "error": str(e),
-            "response": f"Error procesando la consulta: {e}"
+            "response": f"Error procesando la consulta: {e}",
+            "data_summary": {
+                "total_records": 0,
+                "sensors": [],
+                "devices": []
+            },
+            "model_used": "N/A",
+            "execution_status": "error",
+            "verification": {}
         }
 
 def render_chat_interface():
