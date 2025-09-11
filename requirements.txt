@@ -1,7 +1,10 @@
-# Versión ultra-minimalista para Streamlit Cloud
+# Dependencias esenciales para Streamlit Cloud - UI completa
 streamlit>=1.35.0
-langgraph>=0.1.0
 groq>=0.30.0
 requests>=2.31.0
 python-dotenv>=1.0.0
 nest-asyncio>=1.5.0
+
+# Adicionales para UI rica (sin conflictos)
+plotly>=5.0.0
+pandas>=2.0.0

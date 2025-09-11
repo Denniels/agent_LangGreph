@@ -21,7 +21,7 @@ load_dotenv()
 sys.path.append(os.path.abspath('.'))
 
 try:
-    from modules.agents.cloud_iot_agent import create_cloud_iot_agent
+    from modules.agents.simple_cloud_agent import create_simple_cloud_iot_agent
     from modules.agents.groq_integration import GroqIntegration
 except ImportError as e:
     st.error(f"Error importando módulos: {e}")
@@ -100,7 +100,7 @@ async def initialize_agent(groq_api_key: str) -> bool:
         os.environ['GROQ_API_KEY'] = groq_api_key
         
         # Crear agente
-        agent = create_cloud_iot_agent()
+        agent = create_simple_cloud_iot_agent()
         
         # Inicializar
         success = await agent.initialize()
