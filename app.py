@@ -21,8 +21,7 @@ if not os.getenv('GROQ_API_KEY'):
 if not os.getenv('JETSON_API_URL'):
     os.environ['JETSON_API_URL'] = 'https://dpi-opportunity-hybrid-manufacturer.trycloudflare.com'
 
-# Ejecutar la aplicación principal
-from streamlit_app.app_groq import main
-
+# Ejecutar la aplicación optimizada para cloud
 if __name__ == "__main__":
-    main()
+    # Importar y ejecutar la app cloud
+    exec(open('streamlit_app/app_groq_cloud.py').read())
