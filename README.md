@@ -236,7 +236,7 @@ Este proyecto no cuenta con ninguna licencia específica. Para más detalles, co
 
 **Denniels** - *Desarrollador Principal*
 - GitHub: [@Denniels](https://github.com/Denniels)
-- LinkedIn: [LinkedIn](www.linkedin.com/in/daniel-andres-mardones-sanhueza-27b73777)
+- LinkedIn: [Daniel Mardones](www.linkedin.com/in/daniel-andres-mardones-sanhueza-27b73777)
 
 ## 🙏 Agradecimientos
 
