@@ -121,10 +121,9 @@ def render_header():
     st.markdown("""
     <div class="main-header">
         <h1>🤖 Remote IoT Agent</h1>
-        <h3>Powered by Groq AI - Completely FREE</h3>
         <p>Análisis inteligente de sensores IoT remotos</p>
     </div>
-    """, unsafe_allow_html=True)
+    """, unsafe_allow_html=True) # <h3>Powered by Groq AI - Completely FREE</h3>
 
 def render_sidebar():
     """Renderizar barra lateral"""
