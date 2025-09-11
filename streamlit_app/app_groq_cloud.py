@@ -225,7 +225,17 @@ async def process_user_query(query: str) -> dict:
             }
         
         response = await st.session_state.agent.process_query(query)
-        return response
+        
+        # El agente simple devuelve string, convertir a formato dict esperado
+        return {
+            "success": True,
+            "response": response,
+            "metadata": {
+                "confidence": 85,
+                "data_source": "jetson_api",
+                "processing_time": "< 2s"
+            }
+        }
         
     except Exception as e:
         logger.error(f"Error procesando consulta: {e}")

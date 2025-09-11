@@ -139,12 +139,12 @@ class SimpleCloudIoTAgent:
         try:
             if self.jetson_connector:
                 # Intentar obtener datos reales
-                devices = await self.jetson_connector.get_devices()
+                devices = self.jetson_connector.get_devices()
                 all_data = []
                 
                 for device in devices:
                     try:
-                        device_data = await self.jetson_connector.get_device_data(
+                        device_data = self.jetson_connector.get_device_data(
                             device_id=device.get("id", "unknown"),
                             limit=20
                         )
@@ -206,10 +206,9 @@ class SimpleCloudIoTAgent:
             if self.groq_integration:
                 # Usar Groq para respuesta inteligente
                 prompt = self._build_analysis_prompt(user_query, analysis, sensor_data)
-                response = await self.groq_integration.generate_response(
+                response = self.groq_integration.generate_response(
                     prompt,
-                    model=self.groq_model,
-                    max_tokens=1000
+                    model=self.groq_model
                 )
                 return response
             else:
