@@ -70,7 +70,7 @@ class IoTAgentLangGraph:
             logger.info(f"🔍 Procesando consulta para usuario {user_id}, sesión {thread_id}")
             logger.info(f"📝 Consulta: {user_query}")
             
-            # Procesar usando LangGraph
+            # Procesar usando LangGraph (asíncronamente)
             result = await self.graph_builder.process_query(
                 user_query=user_query,
                 thread_id=thread_id

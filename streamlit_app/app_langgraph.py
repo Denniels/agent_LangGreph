@@ -8,8 +8,12 @@ Interfaz de usuario que utiliza el agente IoT con LangGraph StateGraph.
 import streamlit as st
 import asyncio
 import time
+import sys
+import os
 from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor
+
+# Agregar el directorio padre al path para imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from modules.agents.iot_agent_langgraph import langgraph_agent
 from modules.utils.logger import setup_logger
@@ -66,28 +70,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-@st.cache_resource
-def get_persistent_loop():
-    """Crea y mantiene un event loop persistente."""
-    try:
-        # Intentar obtener el loop actual
-        loop = asyncio.get_event_loop()
-        if loop.is_closed():
-            raise RuntimeError("Loop cerrado")
-    except RuntimeError:
-        # Crear nuevo loop si no existe o está cerrado
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    return loop
-
 def run_async(coro):
     """Ejecuta una corrutina de forma segura en Streamlit."""
-    loop = get_persistent_loop()
-    
-    # Usar ThreadPoolExecutor para evitar conflictos
-    with ThreadPoolExecutor() as executor:
-        future = executor.submit(asyncio.run_coroutine_threadsafe, coro, loop)
-        return future.result()
+    try:
+        return asyncio.run(coro)
+    except Exception as e:
+        logger.error(f"Error ejecutando corrutina: {e}")
+        return None
 
 async def initialize_agent():
     """Inicializa el agente LangGraph si no está inicializado."""
@@ -127,7 +116,7 @@ def main():
         try:
             agent_status = run_async(langgraph_agent.get_agent_status())
             
-            if agent_status.get("agent_initialized", False):
+            if agent_status and agent_status.get("agent_initialized", False):
                 st.markdown('<div class="success-card">🟢 Agente Activo</div>', unsafe_allow_html=True)
                 
                 # Métricas del agente
@@ -148,6 +137,7 @@ def main():
                 
         except Exception as e:
             st.error(f"Error obteniendo estado: {e}")
+            logger.error(f"Error en get_agent_status: {e}")
         
         # Visualización del grafo
         st.subheader("📊 Grafo LangGraph")
@@ -189,7 +179,6 @@ def main():
                 "¿Qué dispositivos están activos?",
                 "Analiza las tendencias de temperatura",
                 "Detecta anomalías en los datos",
-                "Genera estadísticas de humedad"
             ]
             
             selected_example = st.selectbox("Selecciona un ejemplo:", [""] + examples)
@@ -272,28 +261,32 @@ def main():
         try:
             capabilities = run_async(langgraph_agent.get_available_capabilities())
             
-            # Características del grafo
-            st.write("### 🔗 Características LangGraph")
-            for feature in capabilities.get("graph_features", []):
-                st.write(f"✓ {feature}")
-            
-            # Tipos de consultas soportadas
-            st.write("### 🔍 Consultas Soportadas")
-            for query_type in capabilities.get("supported_queries", []):
-                st.write(f"• {query_type}")
-            
-            # Herramientas disponibles
-            st.write("### 🛠️ Herramientas Disponibles")
-            for tool in capabilities.get("available_tools", []):
-                st.write(f"• {tool}")
-            
-            # Características avanzadas
-            st.write("### ⚡ Características Avanzadas")
-            for feature in capabilities.get("advanced_features", []):
-                st.write(f"• {feature}")
+            if capabilities:
+                # Características del grafo
+                st.write("### 🔗 Características LangGraph")
+                for feature in capabilities.get("graph_features", []):
+                    st.write(f"✓ {feature}")
+                
+                # Tipos de consultas soportadas
+                st.write("### 🔍 Consultas Soportadas")
+                for query_type in capabilities.get("supported_queries", []):
+                    st.write(f"• {query_type}")
+                
+                # Herramientas disponibles
+                st.write("### 🛠️ Herramientas Disponibles")
+                for tool in capabilities.get("available_tools", []):
+                    st.write(f"• {tool}")
+                
+                # Características avanzadas
+                st.write("### ⚡ Características Avanzadas")
+                for feature in capabilities.get("advanced_features", []):
+                    st.write(f"• {feature}")
+            else:
+                st.warning("No se pudieron obtener las capacidades del agente")
                 
         except Exception as e:
             st.error(f"Error obteniendo capacidades: {e}")
+            logger.error(f"Error en get_available_capabilities: {e}")
     
     with tab3:
         st.subheader("📈 Historial de Sesiones")

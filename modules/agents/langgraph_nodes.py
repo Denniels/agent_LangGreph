@@ -13,14 +13,9 @@ from datetime import datetime
 from modules.agents.langgraph_state import (
     IoTAgentState, QueryIntent, ToolType, ExecutionStatus
 )
-from modules.tools.database_tools import (
-    get_sensor_data, get_devices, get_alerts, get_sensor_stats_tool,
-    create_alert
-)
-from modules.tools.analysis_tools import (
-    analyze_trends, detect_anomalies, calculate_statistics
-)
-from modules.agents.ollama_integration import OllamaLLM
+from modules.tools.database_tools import DatabaseTools
+from modules.tools.analysis_tools import AnalysisTools
+from modules.agents.ollama_integration import OllamaLLMIntegration
 from modules.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -30,7 +25,9 @@ class LangGraphNodes:
     """Nodos de procesamiento para el grafo LangGraph del agente IoT."""
     
     def __init__(self):
-        self.ollama = OllamaLLM()
+        self.ollama = OllamaLLMIntegration()
+        self.db_tools = DatabaseTools()
+        self.analysis_tools = AnalysisTools()
         
     async def query_analyzer_node(self, state: IoTAgentState) -> IoTAgentState:
         """
@@ -184,8 +181,9 @@ class LangGraphNodes:
             
             # Generar respuesta usando Ollama
             response = await self.ollama.generate_response(
-                user_query=state["user_query"],
-                context=context
+                user_message=state["user_query"],
+                context_data=context,
+                tools_results=state["tool_results"]
             )
             
             state["final_response"] = response
@@ -197,7 +195,13 @@ class LangGraphNodes:
                 duration = state["execution_metadata"]["end_time"] - state["execution_metadata"]["start_time"]
                 state["execution_metadata"]["total_duration"] = duration.total_seconds()
             
+            # Debug logging para verificar el estado
             logger.info("✅ Respuesta generada exitosamente")
+            logger.info(f"🔍 DEBUG response_generator_node:")
+            logger.info(f"  - final_response longitud: {len(response) if response else 0}")
+            logger.info(f"  - final_response preview: {response[:100] if response else 'None'}...")
+            logger.info(f"  - status establecido: {state['execution_metadata']['status']}")
+            logger.info(f"  - error_info: {state.get('error_info')}")
             
             return state
             
@@ -300,25 +304,29 @@ class LangGraphNodes:
         
         try:
             if tool_name == ToolType.GET_SENSOR_DATA:
-                return await get_sensor_data(limit=100)
+                return await self.db_tools.get_sensor_data_tool(limit=100)
             
             elif tool_name == ToolType.GET_DEVICES:
-                return await get_devices()
+                return await self.db_tools.get_devices_tool()
             
             elif tool_name == ToolType.GET_ALERTS:
-                return await get_alerts()
+                return await self.db_tools.get_alerts_tool()
             
             elif tool_name == ToolType.GET_SENSOR_STATS:
-                return await get_sensor_stats_tool()
+                return await self.db_tools.get_sensor_stats_tool()
             
             elif tool_name == ToolType.ANALYZE_TRENDS:
-                return await analyze_trends(state["context_data"])
+                # Convertir context_data a lista para analysis_tools
+                sensor_data = self._extract_sensor_data_from_context(state["context_data"])
+                return self.analysis_tools.analyze_sensor_trends(sensor_data)
             
             elif tool_name == ToolType.DETECT_ANOMALIES:
-                return await detect_anomalies(state["context_data"])
+                sensor_data = self._extract_sensor_data_from_context(state["context_data"])
+                return self.analysis_tools.detect_anomalies(sensor_data)
             
             elif tool_name == ToolType.CALCULATE_STATISTICS:
-                return await calculate_statistics(state["context_data"])
+                sensor_data = self._extract_sensor_data_from_context(state["context_data"])
+                return self.analysis_tools.generate_summary_report(sensor_data)
             
             else:
                 logger.warning(f"⚠️ Herramienta desconocida: {tool_name}")
@@ -339,17 +347,36 @@ class LangGraphNodes:
         
         return context
     
+    def _extract_sensor_data_from_context(self, context_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Extrae datos de sensores del contexto para análisis."""
+        
+        # Buscar datos de sensores en diferentes herramientas
+        if ToolType.GET_SENSOR_DATA in context_data:
+            return context_data[ToolType.GET_SENSOR_DATA]
+        
+        # Si no hay datos directos, intentar construir lista vacía
+        return []
+    
     async def _analyze_trends(self, context_data: Dict[str, Any]) -> Dict[str, Any]:
         """Analiza tendencias en los datos."""
-        return await analyze_trends(context_data)
+        sensor_data = self._extract_sensor_data_from_context(context_data)
+        if sensor_data:
+            return self.analysis_tools.analyze_sensor_trends(sensor_data)
+        return {"trends": "No hay datos suficientes para análisis de tendencias"}
     
     async def _detect_anomalies(self, context_data: Dict[str, Any]) -> Dict[str, Any]:
         """Detecta anomalías en los datos."""
-        return await detect_anomalies(context_data)
+        sensor_data = self._extract_sensor_data_from_context(context_data)
+        if sensor_data:
+            return self.analysis_tools.detect_anomalies(sensor_data)
+        return {"anomalies": "No hay datos suficientes para detección de anomalías"}
     
     async def _calculate_statistics(self, context_data: Dict[str, Any]) -> Dict[str, Any]:
         """Calcula estadísticas de los datos."""
-        return await calculate_statistics(context_data)
+        sensor_data = self._extract_sensor_data_from_context(context_data)
+        if sensor_data:
+            return self.analysis_tools.generate_summary_report(sensor_data)
+        return {"statistics": "No hay datos suficientes para estadísticas"}
     
     def _generate_data_summary(self, context_data: Dict[str, Any]) -> Dict[str, Any]:
         """Genera un resumen de los datos."""
@@ -417,3 +444,38 @@ class LangGraphNodes:
         }
         
         return friendly_responses.get(node, f"Error en {node}: {error_msg}")
+
+    async def data_verification_node(self, state: IoTAgentState) -> IoTAgentState:
+        """
+        Nodo de verificación que valida la respuesta antes de enviarla al usuario.
+        Previene alucinaciones del LLM verificando que solo se mencionen sensores reales.
+        
+        Args:
+            state: Estado actual del agente
+            
+        Returns:
+            Estado actualizado con verificación completada
+        """
+        try:
+            logger.info("🔍 Verificando respuesta para prevenir alucinaciones...")
+            
+            from modules.agents.data_verification_node import DataVerificationNode
+            
+            # Crear instancia del verificador
+            verifier = DataVerificationNode()
+            
+            # Ejecutar verificación
+            verified_state = await verifier.verify_response(state)
+            
+            # Log de resultados (no agregar a nodes_executed aquí, ya se hace en verify_response)
+            if verified_state.get("needs_correction", False):
+                logger.warning("⚠️ Se detectaron alucinaciones - respuesta marcada para corrección")
+            else:
+                logger.info("✅ Verificación exitosa - respuesta validada")
+            
+            return verified_state
+            
+        except Exception as e:
+            logger.error(f"❌ Error en nodo de verificación: {e}")
+            state["verification_error"] = str(e)
+            return state

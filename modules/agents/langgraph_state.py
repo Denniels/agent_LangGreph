@@ -39,11 +39,30 @@ class IoTAgentState(TypedDict):
     tool_results: Dict[str, Any]
     context_data: Dict[str, Any]
     
+    # Datos remotos (para API de Jetson)
+    raw_data: List[Dict[str, Any]]
+    formatted_data: Optional[str]
+    sensor_summary: Optional[Dict[str, Any]]
+    data_source: Optional[str]
+    data_collection_success: Optional[bool]
+    data_collection_error: Optional[str]
+    data_collection_timestamp: Optional[str]
+    analyzed_query: Optional[Dict[str, Any]]
+    
     # Análisis y procesamiento
     analysis_results: Dict[str, Any]
     
     # Respuesta
     final_response: Optional[str]
+    
+    # Verificación de datos (prevención de alucinaciones)
+    needs_correction: bool
+    correction_prompt: Optional[str]
+    original_response: Optional[str]
+    verification_metadata: Optional[Dict[str, Any]]
+    verification_status: Optional[str]
+    hallucinations_detected: Optional[List[str]]
+    execution_status: Optional[str]
     
     # Control de flujo
     error_info: Optional[Dict[str, Any]]
@@ -94,6 +113,7 @@ class NodeNames:
     DATA_COLLECTOR = "data_collector"
     DATA_ANALYZER = "data_analyzer"
     RESPONSE_GENERATOR = "response_generator"
+    DATA_VERIFICATION = "data_verification"
     ERROR_HANDLER = "error_handler"
     END = "end"
 
@@ -126,8 +146,23 @@ def create_initial_state(user_query: str, messages: List[BaseMessage] = None) ->
         required_tools=[],
         tool_results={},
         context_data={},
+        raw_data=[],
+        formatted_data=None,
+        sensor_summary=None,
+        data_source=None,
+        data_collection_success=None,
+        data_collection_error=None,
+        data_collection_timestamp=None,
+        analyzed_query=None,
         analysis_results={},
         final_response=None,
+        needs_correction=False,
+        correction_prompt=None,
+        original_response=None,
+        verification_metadata=None,
+        verification_status=None,
+        hallucinations_detected=None,
+        execution_status=None,
         error_info=None,
         retry_count=0,
         execution_metadata={

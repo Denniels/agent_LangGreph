@@ -86,14 +86,52 @@ class OllamaLLMIntegration:
             
             # Preparar el mensaje con resultados de herramientas si existen
             enhanced_message = user_message
-            # En lugar de pegar JSON completo, solo un resumen breve para orientar la respuesta
+            
+            # MEJORADO: Incluir datos reales en lugar de solo conteos
             if tools_results:
                 try:
+                    data_context = "\n\n📊 **DATOS REALES DISPONIBLES:**\n"
+                    
+                    # Procesar datos de sensores
+                    if "sensor_data" in tools_results and tools_results["sensor_data"]:
+                        sensor_data = tools_results["sensor_data"]
+                        data_context += f"🌡️ **Registros de sensores**: {len(sensor_data)} lecturas recientes\n"
+                        
+                        # Agregar muestra de datos más recientes por tipo de sensor
+                        by_sensor = {}
+                        for record in sensor_data[:20]:  # Solo los 20 más recientes
+                            sensor_type = record.get('sensor_type', 'unknown')
+                            if sensor_type not in by_sensor:
+                                by_sensor[sensor_type] = []
+                            by_sensor[sensor_type].append(record)
+                        
+                        for sensor_type, records in by_sensor.items():
+                            latest = records[0]  # El más reciente
+                            device_id = latest.get('device_id', 'N/D')
+                            value = latest.get('value', 'N/D')
+                            unit = latest.get('unit', '')
+                            timestamp = latest.get('timestamp', 'N/D')
+                            
+                            data_context += f"  • {sensor_type} ({device_id}): {value} {unit} - {timestamp}\n"
+                    
+                    # Procesar datos de dispositivos
+                    if "devices" in tools_results and tools_results["devices"]:
+                        devices = tools_results["devices"]
+                        data_context += f"🔌 **Dispositivos activos**: {len(devices)}\n"
+                        for device in devices[:5]:  # Solo los primeros 5
+                            device_id = device.get('device_id', 'N/D')
+                            status = device.get('status', 'N/D')
+                            last_seen = device.get('last_seen', 'N/D')
+                            data_context += f"  • {device_id}: {status} - {last_seen}\n"
+                    
+                    data_context += "\n🔍 **INSTRUCCIONES**: Usa SOLO estos datos reales para tu respuesta. No inventes información adicional."
+                    enhanced_message += data_context
+                    
+                except Exception as e:
+                    # Fallback al resumen básico si hay error
                     recs = len(tools_results.get("sensor_data", [])) if isinstance(tools_results.get("sensor_data"), list) else "N/D"
                     devs = len(tools_results.get("devices", [])) if isinstance(tools_results.get("devices"), list) else "N/D"
-                    enhanced_message += f"\n\nResumen rápido de datos: sensores={recs}, dispositivos={devs}. Responde como informe técnico, sin código ni JSON."
-                except Exception:
-                    pass
+                    enhanced_message += f"\n\nResumen de datos: sensores={recs}, dispositivos={devs}. Error procesando detalles: {e}"
             
             # Preparar mensajes para el modelo
             messages = [

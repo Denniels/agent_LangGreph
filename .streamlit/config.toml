@@ -1,0 +1,19 @@
+# Streamlit Cloud Configuration for Cloud IoT Agent
+# =================================================
+
+[global]
+dataFrameSerialization = "legacy"
+
+[server]
+port = 8501
+headless = true
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+primaryColor = "#667eea"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f0f2f6"
+textColor = "#262730"
+font = "sans serif"
