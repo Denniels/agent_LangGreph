@@ -5,10 +5,20 @@ Módulo de Herramientas
 Herramientas que el agente puede utilizar para interactuar con el sistema IoT.
 """
 
-from .database_tools import DatabaseTools
-from .analysis_tools import AnalysisTools
+"""
+Módulo de Herramientas
+=====================
+
+Herramientas que el agente puede utilizar para interactuar con el sistema IoT.
+"""
+
+# Solo importar herramientas que no dependen de base de datos
+try:
+    from .jetson_api_connector import JetsonAPIConnector
+except ImportError:
+    # Fallback si hay problemas de imports
+    pass
 
 __all__ = [
-    "DatabaseTools",
-    "AnalysisTools"
+    "JetsonAPIConnector"
 ]
