@@ -3,7 +3,6 @@
 [![Streamlit Cloud](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://agentlanggreph-xejq85lg2gwww5tqrvunlw.streamlit.app/)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Groq API](https://img.shields.io/badge/AI-Groq%20(FREE)-brightgreen.svg)](https://console.groq.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > 🚀 **[DEMO EN VIVO - Streamlit Cloud](https://agentlanggreph-xejq85lg2gwww5tqrvunlw.streamlit.app/)** 🚀
 
@@ -231,7 +230,7 @@ pytest --cov=modules tests/
 
 ## 📝 Licencia
 
-Este proyecto está licenciado bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
+Este proyecto no cuenta con ninguna licencia específica. Para más detalles, contactarme directamente.
 
 ## 👨‍💻 Autor
 
