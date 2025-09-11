@@ -2,7 +2,7 @@
 # ===================================
 
 # Variables de entorno requeridas:
-# GROQ_API_KEY=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
+# GROQ_API_KEY=tu_nueva_api_key_aqui
 # JETSON_API_URL=https://dpi-opportunity-hybrid-manufacturer.trycloudflare.com
 
 # Configuración automática para cloud

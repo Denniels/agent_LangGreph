@@ -23,7 +23,7 @@ En la configuración de tu app en Streamlit Cloud, ve a **"Advanced settings"** 
 
 ```toml
 # OBLIGATORIO: API Key de Groq (100% gratuita)
-GROQ_API_KEY = "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"
+GROQ_API_KEY = "tu_nueva_api_key_de_groq_aqui"
 
 # OPCIONAL: URL de la API Jetson (usa default si no se especifica)
 JETSON_API_URL = "https://dpi-opportunity-hybrid-manufacturer.trycloudflare.com"
@@ -34,7 +34,7 @@ DEBUG_MODE = false
 LOG_LEVEL = "INFO"
 ```
 
-> ⚠️ **IMPORTANTE**: Reemplaza `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` con tu API key real de Groq.
+> ⚠️ **IMPORTANTE**: Reemplaza `tu_nueva_api_key_de_groq_aqui` con tu API key real de Groq.
 
 ## 🛠️ Configuración del Deployment
 
