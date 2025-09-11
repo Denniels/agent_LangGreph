@@ -1,8 +1,33 @@
+# Archivos sensibles - NUNCA subir al repositorio
+.env
+*.env
+.env.local
+.env.production
+.env.development
+
+# Secrets y configuraciones sensibles
+.streamlit/secrets.toml
+config/secrets.toml
+secrets.toml
+api_keys.txt
+*.key
+*.pem
+*.p12
+
+# Tokens y credenciales
+*token*
+*secret*
+*password*
+*credential*
+*key*
+groq_api_key.txt
+huggingface_token.txt
+
 # Virtual environments
 agente/
 venv/
 env/
-.env
+.venv/
 
 # Python cache
 __pycache__/
@@ -49,3 +74,13 @@ Thumbs.db
 *.tmp
 *.temp
 *~
+
+# Pytest cache
+.pytest_cache/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover

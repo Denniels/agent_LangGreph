@@ -1,128 +1,58 @@
 #!/usr/bin/env python3
 """
-Debug específico para el problema de sensor_data vacía
-=====================================================
-
-Script para probar exactamente qué está consultando el agente
+Debug simple de la estructura de datos de la base de datos
 """
 
 import asyncio
 import sys
-from pathlib import Path
+import os
 
-# Agregar el directorio raíz al path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from modules.database.db_connector import get_db
-from modules.tools.database_tools import DatabaseTools
-from datetime import datetime, timedelta
+from modules.database.db_connector import DatabaseConnector
 
-
-async def debug_sensor_data():
-    """Debug paso a paso de las consultas del agente"""
+async def debug_db_structure():
+    """Debug de la estructura de datos"""
     
-    print("🔍 DEBUG: Verificando consultas del agente IoT")
-    print("=" * 60)
+    print("🔍 DEBUG ESTRUCTURA DE DATOS")
+    print("=" * 40)
     
-    # 1. Probar conexión directa a la base de datos
-    print("\n1️⃣ Probando conexión directa...")
-    db = await get_db()
-    
-    # 2. Probar consulta SQL directa
-    print("\n2️⃣ Consultando datos más recientes (últimas 24 horas)...")
-    recent_query = """
-        SELECT 
-            id, device_id, sensor_type, value, unit, timestamp, created_at
-        FROM sensor_data 
-        WHERE timestamp >= NOW() - INTERVAL '24 hours'
-        ORDER BY timestamp DESC 
-        LIMIT 10
-    """
-    
-    recent_data = await db.execute_query(recent_query)
-    print(f"📊 Datos recientes (24h): {len(recent_data)} registros")
-    
-    if recent_data:
-        print("🔍 Primer registro reciente:")
-        for key, value in recent_data[0].items():
-            print(f"   {key}: {value}")
-    else:
-        print("❌ No hay datos recientes en las últimas 24 horas")
-    
-    # 3. Probar consulta general (últimos 10 registros sin filtro de tiempo)
-    print("\n3️⃣ Consultando últimos 10 registros sin filtro...")
-    general_data = await db.get_sensor_data(limit=10)
-    print(f"📊 Últimos registros: {len(general_data)} registros")
-    
-    if general_data:
-        print("🔍 Primer registro general:")
-        for key, value in general_data[0].items():
-            print(f"   {key}: {value}")
-            
-        print(f"\n📅 Timestamp más reciente: {general_data[0]['timestamp']}")
-        print(f"📅 Creado: {general_data[0]['created_at']}")
-    else:
-        print("❌ No hay datos en la tabla sensor_data")
-    
-    # 4. Probar DatabaseTools (como lo usa el agente)
-    print("\n4️⃣ Probando DatabaseTools (como el agente)...")
-    db_tools = DatabaseTools()
-    agent_data = await db_tools.get_sensor_data_tool(limit=10)
-    print(f"📊 Datos via DatabaseTools: {len(agent_data)} registros")
-    
-    if agent_data:
-        print("🔍 Primer registro via DatabaseTools:")
-        for key, value in agent_data[0].items():
-            print(f"   {key}: {value}")
-    else:
-        print("❌ DatabaseTools no encuentra datos")
-    
-    # 5. Verificar dispositivos específicos de las imágenes
-    print("\n5️⃣ Verificando dispositivos específicos...")
-    
-    devices_to_check = ['arduino_eth_001', 'esp32_wifi_001']
-    
-    for device_id in devices_to_check:
-        print(f"\n🔍 Dispositivo: {device_id}")
-        device_data = await db.get_sensor_data(device_id=device_id, limit=5)
-        print(f"   📊 Registros: {len(device_data)}")
+    try:
+        db = DatabaseConnector()
+        await db.connect()
         
-        if device_data:
-            latest = device_data[0]
-            print(f"   📅 Último registro: {latest['timestamp']}")
-            print(f"   🔢 Sensor: {latest['sensor_type']}")
-            print(f"   📈 Valor: {latest['value']} {latest.get('unit', '')}")
-    
-    # 6. Verificar conteo total
-    print("\n6️⃣ Verificando conteo total...")
-    count_query = "SELECT COUNT(*) as total FROM sensor_data"
-    count_result = await db.execute_query(count_query)
-    total_records = count_result[0]['total']
-    print(f"📊 Total de registros en sensor_data: {total_records:,}")
-    
-    # 7. Verificar registros por fecha
-    print("\n7️⃣ Verificando registros por fecha...")
-    today = datetime.now().strftime('%Y-%m-%d')
-    date_query = """
-        SELECT 
-            DATE(timestamp) as fecha,
-            COUNT(*) as registros
-        FROM sensor_data 
-        WHERE timestamp >= NOW() - INTERVAL '7 days'
-        GROUP BY DATE(timestamp)
-        ORDER BY fecha DESC
-    """
-    
-    date_data = await db.execute_query(date_query)
-    print("📅 Registros por día (últimos 7 días):")
-    for row in date_data:
-        print(f"   {row['fecha']}: {row['registros']:,} registros")
-    
-    await db.disconnect()
-    
-    print("\n" + "=" * 60)
-    print("🔍 DEBUG COMPLETADO")
-
+        # Consulta simple
+        query = "SELECT COUNT(*) FROM sensor_data;"
+        result = await db.execute_query(query)
+        
+        print(f"Query: {query}")
+        print(f"Result type: {type(result)}")
+        print(f"Result: {result}")
+        
+        if result:
+            print(f"First item type: {type(result[0])}")
+            print(f"First item: {result[0]}")
+            
+            if isinstance(result[0], dict):
+                print(f"Keys: {result[0].keys()}")
+            elif isinstance(result[0], (list, tuple)):
+                print(f"Length: {len(result[0])}")
+                print(f"Values: {result[0]}")
+        
+        # Otra consulta para verificar estructura
+        query2 = "SELECT device_id, sensor_type FROM sensor_data LIMIT 1;"
+        result2 = await db.execute_query(query2)
+        
+        print(f"\nQuery2: {query2}")
+        print(f"Result2: {result2}")
+        
+        if result2:
+            print(f"First item2: {result2[0]}")
+        
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
-    asyncio.run(debug_sensor_data())
+    asyncio.run(debug_db_structure())

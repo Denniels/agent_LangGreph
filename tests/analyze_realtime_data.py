@@ -1,166 +1,172 @@
 #!/usr/bin/env python3
 """
-Análisis de datos en tiempo real
-===============================
-
-Script para verificar exactamente cuántos registros hay en tiempo real
+Diagnóstico completo de acceso a base de datos
+Verifica que el agente pueda acceder a TODOS los datos reales
 """
 
 import asyncio
 import sys
-from pathlib import Path
+import os
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from modules.database.db_connector import DatabaseConnector
 from datetime import datetime, timedelta
 
-# Agregar el directorio raíz al path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from modules.database.db_connector import get_db
-
-
-async def analyze_realtime_data():
-    """Analiza los datos en tiempo real para entender el problema"""
+async def comprehensive_db_test():
+    """Diagnóstico exhaustivo de la base de datos"""
     
-    print("🔍 ANÁLISIS DE DATOS EN TIEMPO REAL")
+    print("🔍 DIAGNÓSTICO COMPLETO DE BASE DE DATOS")
     print("=" * 60)
     
-    db = await get_db()
-    
-    # 1. Verificar registros de los últimos 10 minutos
-    print("\n1️⃣ Registros de los últimos 10 minutos...")
-    query_10min = """
-        SELECT 
-            device_id,
-            sensor_type,
-            COUNT(*) as registros,
-            MIN(timestamp) as primer_registro,
-            MAX(timestamp) as ultimo_registro
+    try:
+        db = DatabaseConnector()
+        await db.connect()
+        print("✅ Conexión establecida exitosamente")
+        
+        # 1. VERIFICAR CONTEO TOTAL DE REGISTROS
+        print("\n📊 CONTEO TOTAL DE REGISTROS:")
+        total_query = "SELECT COUNT(*) as total_records FROM sensor_data;"
+        total_result = await db.execute_query(total_query)
+        
+        if total_result:
+            total_count = total_result[0]['total_records']
+            print(f"  🔢 Total de registros: {total_count:,}")
+        
+        # 2. CONTEO POR DISPOSITIVO
+        print("\n🔌 REGISTROS POR DISPOSITIVO:")
+        device_query = """
+        SELECT device_id, COUNT(*) as count, 
+               MIN(timestamp) as first_record,
+               MAX(timestamp) as last_record
+        FROM sensor_data 
+        GROUP BY device_id 
+        ORDER BY count DESC;
+        """
+        device_results = await db.execute_query(device_query)
+        
+        if device_results:
+            for row in device_results:
+                device_id = row['device_id']
+                count = row['count']
+                first = row['first_record']
+                last = row['last_record']
+                print(f"  📱 {device_id}: {count:,} registros ({first} → {last})")
+        
+        # 3. CONTEO POR TIPO DE SENSOR
+        print("\n🌡️ REGISTROS POR TIPO DE SENSOR:")
+        sensor_query = """
+        SELECT sensor_type, COUNT(*) as count,
+               MIN(timestamp) as first_record,
+               MAX(timestamp) as last_record
+        FROM sensor_data 
+        GROUP BY sensor_type 
+        ORDER BY count DESC;
+        """
+        sensor_results = await db.execute_query(sensor_query)
+        
+        if sensor_results:
+            for row in sensor_results:
+                sensor_type = row['sensor_type']
+                count = row['count']
+                first = row['first_record']
+                last = row['last_record']
+                print(f"  📊 {sensor_type}: {count:,} registros ({first} → {last})")
+        
+        # 4. VERIFICAR DATOS RECIENTES (últimos 10 minutos)
+        print("\n⏰ DATOS RECIENTES (últimos 10 minutos):")
+        recent_query = """
+        SELECT device_id, sensor_type, COUNT(*) as count,
+               MIN(value) as min_val, MAX(value) as max_val, AVG(value) as avg_val
         FROM sensor_data 
         WHERE timestamp >= NOW() - INTERVAL '10 minutes'
         GROUP BY device_id, sensor_type
-        ORDER BY ultimo_registro DESC
-    """
-    
-    data_10min = await db.execute_query(query_10min)
-    total_10min = sum(row['registros'] for row in data_10min)
-    
-    print(f"📊 Total de registros (10 min): {total_10min}")
-    print(f"📱 Dispositivos activos: {len(set(row['device_id'] for row in data_10min))}")
-    
-    for row in data_10min:
-        print(f"   {row['device_id']} - {row['sensor_type']}: {row['registros']} registros")
-        print(f"      Último: {row['ultimo_registro']}")
-    
-    # 2. Verificar registros de los últimos 2 minutos
-    print("\n2️⃣ Registros de los últimos 2 minutos...")
-    query_2min = """
-        SELECT 
-            device_id,
-            sensor_type,
-            value,
-            timestamp
+        ORDER BY device_id, sensor_type;
+        """
+        recent_results = await db.execute_query(recent_query)
+        
+        if recent_results:
+            for row in recent_results:
+                device = row['device_id']
+                sensor = row['sensor_type']
+                count = row['count']
+                min_val = row['min_val']
+                max_val = row['max_val']
+                avg_val = row['avg_val']
+                print(f"  🔥 {device}/{sensor}: {count} registros | Min: {min_val:.2f} | Max: {max_val:.2f} | Avg: {avg_val:.2f}")
+        else:
+            print("  ❌ NO SE ENCONTRARON DATOS RECIENTES")
+        
+        # 5. VERIFICAR DATOS DEL ÚLTIMO DÍA
+        print("\n📅 DATOS DEL ÚLTIMO DÍA:")
+        day_query = """
+        SELECT COUNT(*) as total_day,
+               COUNT(DISTINCT device_id) as unique_devices,
+               COUNT(DISTINCT sensor_type) as unique_sensors
         FROM sensor_data 
-        WHERE timestamp >= NOW() - INTERVAL '2 minutes'
-        ORDER BY timestamp DESC
-        LIMIT 50
-    """
-    
-    data_2min = await db.execute_query(query_2min)
-    print(f"📊 Registros últimos 2 min: {len(data_2min)}")
-    
-    if data_2min:
-        print(f"🕐 Más reciente: {data_2min[0]['timestamp']}")
-        print(f"🕐 Más antiguo: {data_2min[-1]['timestamp']}")
+        WHERE timestamp >= NOW() - INTERVAL '24 hours';
+        """
+        day_results = await db.execute_query(day_query)
         
-        print("\n📋 Últimos 10 registros:")
-        for i, row in enumerate(data_2min[:10]):
-            print(f"   {i+1}. {row['device_id']} - {row['sensor_type']}: {row['value']} @ {row['timestamp']}")
-    
-    # 3. Verificar lo que obtiene el agente actualmente
-    print("\n3️⃣ Comparando con las consultas del agente...")
-    
-    # Consulta actual del agente (limit=10)
-    agent_query = """
-        SELECT 
-            id,
-            device_id,
-            sensor_type,
-            value,
-            unit,
-            timestamp,
-            created_at
-        FROM sensor_data
-        ORDER BY timestamp DESC 
-        LIMIT 10
-    """
-    
-    agent_data = await db.execute_query(agent_query)
-    print(f"📊 Datos del agente (limit=10): {len(agent_data)}")
-    
-    if agent_data:
-        print(f"🕐 Más reciente: {agent_data[0]['timestamp']}")
-        print(f"🕐 Más antiguo: {agent_data[-1]['timestamp']}")
-    
-    # 4. Proponer consulta optimizada
-    print("\n4️⃣ Consulta optimizada propuesta...")
-    optimized_query = """
-        SELECT 
-            id,
-            device_id,
-            sensor_type,
-            value,
-            unit,
-            timestamp,
-            created_at
-        FROM sensor_data
-        WHERE timestamp >= NOW() - INTERVAL '10 minutes'
-        ORDER BY timestamp DESC 
-        LIMIT 200
-    """
-    
-    optimized_data = await db.execute_query(optimized_query)
-    print(f"📊 Datos optimizados (10min, limit=200): {len(optimized_data)}")
-    
-    if optimized_data:
-        print(f"🕐 Más reciente: {optimized_data[0]['timestamp']}")
-        print(f"🕐 Más antiguo: {optimized_data[-1]['timestamp']}")
+        if day_results:
+            row = day_results[0]
+            total_day = row['total_day']
+            devices = row['unique_devices']
+            sensors = row['unique_sensors']
+            print(f"  📈 Últimas 24h: {total_day:,} registros de {devices} dispositivos y {sensors} tipos de sensores")
         
-        # Agrupar por dispositivo
-        devices_count = {}
-        for row in optimized_data:
-            device = row['device_id']
-            if device not in devices_count:
-                devices_count[device] = 0
-            devices_count[device] += 1
-        
-        print("\n📱 Registros por dispositivo (optimizado):")
-        for device, count in devices_count.items():
-            print(f"   {device}: {count} registros")
-    
-    # 5. Verificar frecuencia de datos
-    print("\n5️⃣ Análisis de frecuencia...")
-    frequency_query = """
-        SELECT 
-            device_id,
-            DATE_TRUNC('minute', timestamp) as minuto,
-            COUNT(*) as registros_por_minuto
+        # 6. MUESTRA DE DATOS MÁS RECIENTES
+        print("\n🔍 MUESTRA DE DATOS MÁS RECIENTES (últimos 20):")
+        sample_query = """
+        SELECT device_id, sensor_type, value, unit, timestamp
         FROM sensor_data 
-        WHERE timestamp >= NOW() - INTERVAL '10 minutes'
-        GROUP BY device_id, DATE_TRUNC('minute', timestamp)
-        ORDER BY minuto DESC, device_id
-        LIMIT 20
-    """
-    
-    frequency_data = await db.execute_query(frequency_query)
-    print(f"📈 Frecuencia por minuto:")
-    
-    for row in frequency_data:
-        print(f"   {row['device_id']} @ {row['minuto']}: {row['registros_por_minuto']} reg/min")
-    
-    await db.disconnect()
-    
-    print("\n" + "=" * 60)
-    print("✅ ANÁLISIS COMPLETADO")
-
+        ORDER BY timestamp DESC 
+        LIMIT 20;
+        """
+        sample_results = await db.execute_query(sample_query)
+        
+        if sample_results:
+            for i, row in enumerate(sample_results):
+                device = row['device_id']
+                sensor = row['sensor_type']
+                value = row['value']
+                unit = row['unit']
+                timestamp = row['timestamp']
+                print(f"  {i+1:2d}. {device}/{sensor}: {value} {unit} ({timestamp})")
+        else:
+            print("  ❌ NO SE ENCONTRARON DATOS")
+        
+        # 7. VERIFICAR CONFIGURACIÓN DE CONEXIÓN
+        print("\n🔧 CONFIGURACIÓN DE CONEXIÓN:")
+        print(f"  🏠 Host: {db.host}")
+        print(f"  🔌 Puerto: {db.port}")
+        print(f"  🗄️ Base de datos: {db.database}")
+        print(f"  👤 Usuario: {db.user}")
+        print(f"  🔑 Password: {'***' if db.password else 'NO CONFIGURADO'}")
+        
+        # 8. VERIFICAR ESTADO DE TABLAS
+        print("\n📋 ESTADO DE TABLAS:")
+        tables_query = """
+        SELECT table_name, 
+               (SELECT COUNT(*) FROM information_schema.columns WHERE table_name = t.table_name) as column_count
+        FROM information_schema.tables t
+        WHERE table_schema = 'public' AND table_type = 'BASE TABLE';
+        """
+        tables_results = await db.execute_query(tables_query)
+        
+        if tables_results:
+            for row in tables_results:
+                table_name = row['table_name']
+                columns = row['column_count']
+                print(f"  📊 {table_name}: {columns} columnas")
+        
+        print("\n" + "=" * 60)
+        print("✅ DIAGNÓSTICO COMPLETADO")
+        
+    except Exception as e:
+        print(f"❌ Error durante el diagnóstico: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
-    asyncio.run(analyze_realtime_data())
+    asyncio.run(comprehensive_db_test())

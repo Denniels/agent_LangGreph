@@ -1,66 +1,73 @@
 #!/usr/bin/env python3
 """
-Prueba de Consulta al Agente Optimizada
-=======================================
-
-Script para probar consultas específicas al agente IoT optimizado con datos en tiempo real
+Test del sistema mejorado con verificación de datos
+Prueba el nuevo nodo de verificación que previene alucinaciones
 """
 
 import asyncio
 import sys
-from pathlib import Path
-from datetime import datetime
+import os
 
-# Agregar el directorio raíz al path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from modules.agents.iot_agent_ollama import IoTAgent
+from modules.agents.graph_builder import LangGraphBuilder
+from modules.utils.logger import setup_logger
 
+logger = setup_logger(__name__)
 
-async def test_agent_query():
-    """Prueba consultas específicas al agente con datos en tiempo real"""
+async def test_improved_agent():
+    """Prueba el agente mejorado con verificación de datos"""
     
-    print("🤖 PRUEBA DE CONSULTAS AL AGENTE IoT OPTIMIZADO")
+    print("🧪 PRUEBA DEL AGENTE MEJORADO CON VERIFICACIÓN")
     print("=" * 60)
     
-    # Inicializar agente
-    agent = IoTAgent()
-    
-    # Lista de consultas de prueba optimizadas para tiempo real
-    consultas = [
-        "¿Cuántos registros de sensores hay en los últimos 10 minutos?",
-        "¿Cuál es la temperatura actual de todos los sensores?",
-        "¿Qué dispositivos están activos y cuándo fue su última lectura?",
-        "¿Hay alguna anomalía en las lecturas de los sensores ESP32?",
-        "Dame un resumen completo del estado del sistema IoT en tiempo real"
-    ]
-    
-    for i, consulta in enumerate(consultas, 1):
-        print(f"\n{i}️⃣ Consulta: {consulta}")
-        print(f"⏰ Hora: {datetime.now().strftime('%H:%M:%S')}")
-        print("-" * 50)
+    try:
+        # Crear el builder del grafo
+        builder = LangGraphBuilder()
         
-        try:
-            response = await agent.process_message(consulta)
-            print(f"🤖 Respuesta:")
-            # Limitar la respuesta para legibilidad
-            lines = response.split('\n')
-            for line in lines[:15]:  # Primeras 15 líneas
-                print(f"   {line}")
+        # Construir el grafo con el nuevo nodo de verificación
+        graph = builder.build_iot_agent_graph()
+        print("✅ Grafo construido con nodo de verificación")
+        
+        # Pruebas diseñadas para activar alucinaciones
+        test_queries = [
+            "¿Cuál es la humedad actual en la oficina?",  # Debería detectar que no tenemos humedad
+            "Analiza la temperatura y humedad de hoy",     # Debería corregir la parte de humedad
+            "Dame un reporte de temperatura, presión y luz", # Debería corregir presión
+            "¿Hay movimiento en la entrada?",              # Debería decir que no tenemos sensores de movimiento
+            "Muestra solo los datos de temperatura"        # Esta debería pasar sin problemas
+        ]
+        
+        for i, query in enumerate(test_queries, 1):
+            print(f"\n🔍 PRUEBA {i}: {query}")
+            print("-" * 50)
             
-            if len(lines) > 15:
-                print(f"   ... ({len(lines) - 15} líneas más)")
+            try:
+                result = await builder.process_query(query)
                 
-        except Exception as e:
-            print(f"❌ Error: {e}")
+                print(f"📊 **Status**: {result['status']}")
+                print(f"📝 **Respuesta**:")
+                print(result['response'])
+                
+                # Mostrar metadata de verificación si existe
+                if 'execution_metadata' in result:
+                    metadata = result['execution_metadata']
+                    if 'nodes_executed' in metadata:
+                        print(f"🔧 **Nodos ejecutados**: {metadata['nodes_executed']}")
+                
+                print(f"🎯 **Herramientas usadas**: {result.get('tools_used', [])}")
+                
+            except Exception as e:
+                print(f"❌ Error en prueba {i}: {e}")
+            
+            print()
         
-        print("-" * 50)
+        print("✅ TODAS LAS PRUEBAS COMPLETADAS")
         
-        # Pausa entre consultas
-        await asyncio.sleep(2)
-    
-    print(f"\n✅ PRUEBAS COMPLETADAS - AGENTE OPTIMIZADO FUNCIONANDO")
-
+    except Exception as e:
+        print(f"❌ Error general: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
-    asyncio.run(test_agent_query())
+    asyncio.run(test_improved_agent())
