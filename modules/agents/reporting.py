@@ -160,6 +160,57 @@ class ReportGenerator:
             "esp32_wifi_001": ["ntc_entrada", "ntc_salida", "ldr"]  # Temperatura + LDR
         }
     
+    def _expand_sensors_for_device(self, device_id: str, logical_sensors: List[str]) -> List[Dict[str, str]]:
+        """
+        Expande sensores lógicos (como 'temperature') a sensores físicos específicos del dispositivo.
+        
+        Args:
+            device_id: ID del dispositivo
+            logical_sensors: Lista de sensores lógicos (ej: ['temperature', 'ldr'])
+            
+        Returns:
+            Lista de diccionarios con mapeo de sensor lógico a físico
+        """
+        expanded = []
+        device_sensors = self._get_valid_device_sensors()
+        
+        # Normalizar nombre del dispositivo
+        normalized_device = device_id.lower()
+        if "arduino" in normalized_device and "eth" in normalized_device:
+            device_key = "arduino_eth_001"
+        elif "esp32" in normalized_device and "wifi" in normalized_device:
+            device_key = "esp32_wifi_001"
+        else:
+            device_key = device_id
+        
+        physical_sensors = device_sensors.get(device_key, [])
+        
+        for logical_sensor in logical_sensors:
+            if logical_sensor.lower() == 'temperature':
+                # Mapear temperatura a sensores físicos de temperatura
+                for sensor in physical_sensors:
+                    if sensor.lower() in ['t1', 't2', 'avg', 'ntc_entrada', 'ntc_salida']:
+                        expanded.append({
+                            'logical_sensor': 'temperature',
+                            'physical_sensor': sensor
+                        })
+            elif logical_sensor.lower() == 'ldr':
+                # Mapear LDR solo si el dispositivo lo tiene
+                if 'ldr' in physical_sensors:
+                    expanded.append({
+                        'logical_sensor': 'ldr',
+                        'physical_sensor': 'ldr'
+                    })
+            else:
+                # Para otros sensores, mapeo directo si existe
+                if logical_sensor in physical_sensors:
+                    expanded.append({
+                        'logical_sensor': logical_sensor,
+                        'physical_sensor': logical_sensor
+                    })
+        
+        return expanded
+    
     def _is_valid_device_sensor_combination(self, device_id: str, sensor: str) -> bool:
         """
         Valida si un dispositivo específico tiene un sensor específico.
@@ -842,41 +893,45 @@ class ReportGenerator:
                 'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
             
+            # Expandir sensores lógicos a sensores físicos por dispositivo
             for device in devices:
-                for sensor in sensors:
-                    # Validar que la combinación dispositivo-sensor sea válida
-                    if not self._is_valid_device_sensor_combination(device, sensor):
-                        logger.info(f"Omitiendo combinación inválida: {device}/{sensor}")
-                        continue
-                        
-                    key = f"{device}_{sensor}"
+                expanded_sensors = self._expand_sensors_for_device(device, sensors)
+                
+                for sensor_info in expanded_sensors:
+                    physical_sensor = sensor_info['physical_sensor']
+                    logical_sensor = sensor_info['logical_sensor'] 
+                    
+                    key = f"{device}_{physical_sensor}"
                     try:
-                        data_points = self._get_real_sensor_data(device, sensor)
+                        data_points = self._get_real_sensor_data(device, physical_sensor)
                         
                         if not data_points:
-                            logger.warning(f"🚨 No hay datos reales disponibles para {device}/{sensor}")
+                            logger.warning(f"🚨 No hay datos reales disponibles para {device}/{physical_sensor}")
                             all_data[key] = {
                                 'device': device,
-                                'sensor': sensor,
+                                'sensor': physical_sensor,
+                                'logical_sensor': logical_sensor,
                                 'data': [],
                                 'error': 'NO_DATA_AVAILABLE',
-                                'message': f'No se pudieron obtener datos reales para {device}/{sensor}'
+                                'message': f'No se pudieron obtener datos reales para {device}/{physical_sensor}'
                             }
                         else:
                             all_data[key] = {
                                 'device': device,
-                                'sensor': sensor,
+                                'sensor': physical_sensor,
+                                'logical_sensor': logical_sensor,
                                 'data': data_points,
-                                'chart_type': chart_types.get(sensor, 'line')
+                                'chart_type': chart_types.get(logical_sensor, 'line')
                             }
                             metrics['total_registros'] += len(data_points)
                     except Exception as e:
-                        logger.error(f"Error obteniendo datos para {device}/{sensor}: {e}")
+                        logger.error(f"Error obteniendo datos para {device}/{physical_sensor}: {e}")
                         all_data[key] = {
                             'device': device,
-                            'sensor': sensor,
+                            'sensor': physical_sensor,
+                            'logical_sensor': logical_sensor,
                             'data': [],
-                            'chart_type': chart_types.get(sensor, 'line')
+                            'chart_type': chart_types.get(logical_sensor, 'line')
                         }
             
             # Generar según formato
@@ -1438,12 +1493,15 @@ class ReportGenerator:
             for key, info in all_data.items():
                 if info['data']:
                     device = info['device']
-                    sensor = info['sensor']
+                    sensor = info['sensor']  # Sensor físico
+                    logical_sensor = info.get('logical_sensor', sensor)  # Sensor lógico
                     data_points = info['data']
                     chart_type = info['chart_type']
                     
                     # Subsección por sensor con estilo mejorado
                     device_header = f"🔌 {device.upper()} - 📡 {sensor.title()}"
+                    if logical_sensor != sensor:
+                        device_header += f" ({logical_sensor.title()})"
                     story.append(Paragraph(device_header, section_style))
                     
                     # Estadísticas con formato mejorado
@@ -1462,14 +1520,14 @@ class ReportGenerator:
                     try:
                         timestamps = [point['t'] for point in data_points]
                         
-                        # Determinar tipo de gráfico óptimo según sensor
+                        # Determinar tipo de gráfico óptimo según sensor LÓGICO
                         optimal_chart_type = chart_type
-                        if sensor.lower() == 'temperature' and len(values) > 5:
-                            # Para temperatura, usar pie chart para mostrar distribución
-                            optimal_chart_type = "pie"
-                        elif sensor.lower() == 'ldr' and chart_type != "pie":
+                        if logical_sensor.lower() == 'temperature' and len(values) > 5:
+                            # Para temperatura, usar el tipo solicitado por el usuario
+                            optimal_chart_type = chart_type if chart_type in ['pie', 'bar', 'line'] else "pie"
+                        elif logical_sensor.lower() == 'ldr' and chart_type != "pie":
                             # Para LDR, usar barras para mejor visualización
-                            optimal_chart_type = "bar"
+                            optimal_chart_type = chart_type if chart_type in ['bar', 'pie', 'line'] else "bar"
                         
                         fig = self.build_plotly_figure(
                             timestamps, values, optimal_chart_type,
@@ -1477,31 +1535,39 @@ class ReportGenerator:
                             sensor.title()
                         )
                         
-                        # Generar gráfico adicional si es temperatura (línea + torta)
-                        if sensor.lower() == 'temperature' and optimal_chart_type == "pie":
-                            # Agregar gráfico de líneas también para mostrar evolución temporal
-                            story.append(Paragraph("🥧 <b>Distribución por Rangos de Temperatura</b>", section_style))
+                        # Para sensores de temperatura, generar gráfico según tipo solicitado
+                        if logical_sensor.lower() == 'temperature':
+                            if optimal_chart_type == "pie":
+                                story.append(Paragraph("🥧 <b>Distribución por Rangos de Temperatura</b>", section_style))
+                            elif optimal_chart_type == "bar":
+                                story.append(Paragraph("📊 <b>Niveles de Temperatura</b>", section_style))
+                            else:
+                                story.append(Paragraph("📈 <b>Evolución Temporal de la Temperatura</b>", section_style))
+                            
                             img_bytes = self.export_figure_png(fig)
                             if img_bytes:
                                 img_buffer = BytesIO(img_bytes)
                                 img = Image(img_buffer, width=5.5*inch, height=3.5*inch)
                                 story.append(img)
                             story.append(Spacer(1, 10))
+                        
+                        elif logical_sensor.lower() == 'ldr':
+                            if optimal_chart_type == "bar":
+                                story.append(Paragraph("📊 <b>Niveles de Luminosidad</b>", section_style))
+                            elif optimal_chart_type == "pie":
+                                story.append(Paragraph("🥧 <b>Distribución de Luminosidad</b>", section_style))
+                            else:
+                                story.append(Paragraph("📈 <b>Evolución de la Luminosidad</b>", section_style))
                             
-                            # Generar gráfico de líneas temporal
-                            fig_line = self.build_plotly_figure(
-                                timestamps, values, "line",
-                                f"{device} - {sensor} (Evolución Temporal)",
-                                sensor.title()
-                            )
-                            story.append(Paragraph("📈 <b>Evolución Temporal de la Temperatura</b>", section_style))
-                            img_bytes_line = self.export_figure_png(fig_line)
-                            if img_bytes_line:
-                                img_buffer_line = BytesIO(img_bytes_line)
-                                img_line = Image(img_buffer_line, width=5.5*inch, height=3.5*inch)
-                                story.append(img_line)
+                            img_bytes = self.export_figure_png(fig)
+                            if img_bytes:
+                                img_buffer = BytesIO(img_bytes)
+                                img = Image(img_buffer, width=5.5*inch, height=3.5*inch)
+                                story.append(img)
+                            story.append(Spacer(1, 10))
+                        
                         else:
-                            # Exportar gráfico único
+                            # Exportar gráfico genérico
                             img_bytes = self.export_figure_png(fig)
                             if img_bytes:
                                 img_buffer = BytesIO(img_bytes)
