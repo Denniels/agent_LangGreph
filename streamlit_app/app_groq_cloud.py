@@ -23,6 +23,7 @@ sys.path.append(os.path.abspath('.'))
 try:
     from modules.agents.simple_cloud_agent import create_simple_cloud_iot_agent
     from modules.agents.groq_integration import GroqIntegration
+    from modules.agents.reporting import create_report_generator
 except ImportError as e:
     st.error(f"Error importando módulos: {e}")
     st.stop()
@@ -84,6 +85,12 @@ def initialize_session_state():
         st.session_state.conversation_history = []
     if 'groq_api_key' not in st.session_state:
         st.session_state.groq_api_key = os.getenv('GROQ_API_KEY', '')
+    if 'last_response' not in st.session_state:
+        st.session_state.last_response = None
+    if 'last_metadata' not in st.session_state:
+        st.session_state.last_metadata = {}
+    if 'report_generator' not in st.session_state:
+        st.session_state.report_generator = create_report_generator()
 
 async def initialize_agent(groq_api_key: str) -> bool:
     """
@@ -121,9 +128,24 @@ def render_header():
     st.markdown("""
     <div class="main-header">
         <h1>🤖 Remote IoT Agent</h1>
+        <h3>Powered by Groq AI - Completely FREE</h3>
         <p>Análisis inteligente de sensores IoT remotos</p>
     </div>
-    """, unsafe_allow_html=True) # <h3>Powered by Groq AI - Completely FREE</h3>
+    """, unsafe_allow_html=True)
+    
+    # Banner informativo sobre reportes
+    st.markdown("""
+    <div class="info-card" style="margin: 1rem 0; background: linear-gradient(90deg, #e3f2fd 0%, #f3e5f5 100%); border-left: 4px solid #2196f3;">
+        <h4>📊 ¿Quieres generar un reporte ejecutivo descargable?</h4>
+        <p><strong>¡Solo pregúntale al agente!</strong> Ejemplos:</p>
+        <ul>
+            <li><em>"Genera un reporte ejecutivo en PDF del ESP32, sensor ntc_entrada, con gráfico de líneas"</em></li>
+            <li><em>"Dame un informe en Excel del arduino_eth_001, sensor ldr, últimas 48 horas"</em></li>
+            <li><em>"Descarga CSV con todos los datos de temperatura del dispositivo ESP32"</em></li>
+        </ul>
+        <p><small>📋 Formatos disponibles: PDF, CSV, Excel, PNG, HTML | 📈 Tipos de gráfico: líneas, barras, área, scatter</small></p>
+    </div>
+    """, unsafe_allow_html=True)
 
 def render_sidebar():
     """Renderizar barra lateral"""
@@ -279,6 +301,10 @@ def render_chat_interface():
         # Mostrar mensaje del usuario
         st.chat_message("user").write(prompt)
         
+        # Verificar si es una solicitud de reporte
+        report_keywords = ["reporte", "informe", "ejecutivo", "descarga", "pdf", "csv", "excel", "exporta"]
+        is_report_request = any(keyword.lower() in prompt.lower() for keyword in report_keywords)
+        
         # Procesar consulta
         with st.chat_message("assistant"):
             with st.spinner("🤖 Analizando sensores..."):
@@ -288,7 +314,65 @@ def render_chat_interface():
                 response_text = response.get("response", "No se pudo generar respuesta")
                 st.write(response_text)
                 
-                # Mostrar información adicional
+                # Guardar última respuesta y metadata para reportes
+                st.session_state.last_response = response_text
+                st.session_state.last_metadata = response
+                
+                # Si es una solicitud de reporte, mostrar opciones de descarga
+                if is_report_request:
+                    st.markdown("---")
+                    st.markdown("### 📊 Generar Reporte Descargable")
+                    
+                    # Detectar especificación del reporte
+                    report_spec = st.session_state.report_generator.parse_user_request_to_spec(
+                        prompt, response
+                    )
+                    
+                    if report_spec:
+                        col1, col2 = st.columns([2, 1])
+                        
+                        with col1:
+                            st.info(f"🎯 **Reporte detectado:** {report_spec.get('title', 'Reporte IoT')}")
+                            st.write(f"📱 **Dispositivo:** {report_spec.get('device_id', 'N/A')}")
+                            st.write(f"🔬 **Sensor:** {report_spec.get('sensor', 'N/A')}")
+                            st.write(f"📈 **Gráfico:** {report_spec.get('chart', {}).get('type', 'line')}")
+                            st.write(f"📄 **Formato:** {report_spec.get('format', 'pdf').upper()}")
+                        
+                        with col2:
+                            if st.button("📥 Generar y Descargar", type="primary"):
+                                with st.spinner("Generando reporte..."):
+                                    try:
+                                        file_bytes, filename = st.session_state.report_generator.generate_report(
+                                            report_spec, response, response_text
+                                        )
+                                        
+                                        if file_bytes:
+                                            # Determinar MIME type
+                                            mime_types = {
+                                                'pdf': 'application/pdf',
+                                                'csv': 'text/csv',
+                                                'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                                'png': 'image/png',
+                                                'html': 'text/html'
+                                            }
+                                            mime_type = mime_types.get(report_spec.get('format', 'pdf'), 'application/octet-stream')
+                                            
+                                            st.download_button(
+                                                label=f"⬇️ Descargar {filename}",
+                                                data=file_bytes,
+                                                file_name=filename,
+                                                mime=mime_type,
+                                                use_container_width=True
+                                            )
+                                            st.success("✅ ¡Reporte generado exitosamente!")
+                                        else:
+                                            st.error("❌ Error generando el reporte")
+                                    except Exception as e:
+                                        st.error(f"❌ Error: {str(e)}")
+                    else:
+                        st.warning("⚠️ No se pudo interpretar la solicitud de reporte. Intenta ser más específico.")
+                
+                # Mostrar información adicional (detalles técnicos)
                 with st.expander("📊 Detalles técnicos"):
                     col1, col2, col3 = st.columns(3)
                     

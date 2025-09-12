@@ -8,3 +8,9 @@ nest-asyncio>=1.5.0
 # Adicionales para UI rica (sin conflictos)
 plotly>=5.0.0
 pandas>=2.0.0
+
+# Dependencias para generación de reportes
+kaleido>=0.2.1
+reportlab>=4.0.0
+openpyxl>=3.1.0
+xlsxwriter>=3.1.0

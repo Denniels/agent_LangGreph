@@ -19,6 +19,7 @@ Un agente de IA inteligente para análisis de datos IoT en tiempo real, construi
 - 💰 **100% Gratuito**: Sin costos usando Groq API (14,400 requests/día gratis)
 - 🚀 **Deploy Cloud**: Desplegado en Streamlit Cloud
 - 📈 **Métricas Avanzadas**: Health check y estadísticas del sistema
+- 📋 **Reportes Ejecutivos**: Generación automática de reportes descargables (PDF, CSV, Excel, PNG, HTML)
 
 ## 🎯 Demo en Vivo
 
@@ -31,6 +32,12 @@ Un agente de IA inteligente para análisis de datos IoT en tiempo real, construi
 - "Muestra un resumen de todos los dispositivos IoT"
 - "¿Hay alguna anomalía en las lecturas?"
 - "Analiza las tendencias de los últimas 48 horas"
+
+### 📊 Generar Reportes Ejecutivos
+- "Genera un reporte ejecutivo en PDF del ESP32, sensor ntc_entrada, con gráfico de líneas"
+- "Dame un informe en Excel del arduino_eth_001, sensor ldr, últimas 48 horas"
+- "Descarga CSV con todos los datos de temperatura del dispositivo ESP32"
+- "Exporta PNG con gráfico de barras del sensor ntc_salida"
 
 ## 🏗️ Arquitectura del Sistema
 
@@ -177,6 +184,58 @@ agent_LangGreph/
 }
 ```
 
+## 📊 Generación de Reportes Ejecutivos
+
+### 🎯 ¿Cómo solicitar un reporte?
+
+Simplemente pregúntale al agente en lenguaje natural. El sistema detectará automáticamente si quieres generar un reporte descargable.
+
+#### Ejemplos de Solicitudes:
+
+**Reportes PDF:**
+```
+"Genera un reporte ejecutivo en PDF del ESP32, sensor ntc_entrada, con gráfico de líneas"
+"Dame un informe PDF del arduino_eth_001, últimas 72 horas, gráfico de área"
+```
+
+**Exportación de Datos:**
+```
+"Exporta CSV con todos los registros de temperatura del ESP32"
+"Dame un Excel del sensor ldr, últimas 48 horas"
+```
+
+**Gráficos:**
+```
+"Descarga PNG con gráfico de barras del sensor ntc_salida"
+"Genera imagen del sensor ldr con gráfico scatter"
+```
+
+### 📋 Formatos Soportados
+
+| Formato | Descripción | Contenido |
+|---------|-------------|-----------|
+| **PDF** | Reporte ejecutivo completo | Resumen + Métricas + Gráficos |
+| **CSV** | Datos tabulares | Timestamps + Valores + Metadata |
+| **XLSX** | Excel con formato | Datos estructurados + Múltiples hojas |
+| **PNG** | Imagen del gráfico | Visualización de alta calidad |
+| **HTML** | Reporte web | Interactivo con Plotly |
+
+### 📈 Tipos de Gráficos
+
+- **Líneas**: Tendencias temporales
+- **Barras**: Comparaciones discretas  
+- **Área**: Volúmenes acumulativos
+- **Scatter**: Distribuciones de puntos
+- **Heatmap**: Matrices de correlación
+
+### ⚙️ Configuración Automática
+
+El sistema detecta automáticamente:
+- **Dispositivos disponibles** (ESP32, Arduino)
+- **Sensores activos** (ntc_entrada, ntc_salida, ldr, etc.)
+- **Rangos temporales** (últimas 24h, 48h, 72h, semana)
+- **Formato preferido** basado en palabras clave
+
 ## 🧪 Pruebas
 
 ```bash
@@ -186,6 +245,7 @@ pytest tests/
 # Pruebas específicas
 pytest tests/test_agent.py -v
 pytest tests/test_groq_integration.py -v
+pytest tests/test_reporting.py -v
 
 # Cobertura de código
 pytest --cov=modules tests/
@@ -198,12 +258,16 @@ pytest --cov=modules tests/
 - ✅ Integración Groq AI
 - ✅ Deploy en Streamlit Cloud
 - ✅ UI responsive y profesional
+- ✅ **Generación de reportes ejecutivos (PDF, CSV, XLSX, PNG, HTML)**
+- ✅ **Detección automática de solicitudes de reportes**
+- ✅ **Gráficos interactivos con Plotly**
 
 ### Próximas Características (v1.1)
 - 🔄 Cache de datos para mejor rendimiento
 - 📊 Dashboards avanzados con gráficos
 - 🔔 Sistema de alertas automáticas
 - 📱 Versión móvil optimizada
+- 📧 Envío de reportes por email
 
 ### Futuro (v2.0)
 - 🤖 Múltiples modelos de IA
