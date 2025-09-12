@@ -49,12 +49,12 @@ def display_usage_metrics(usage_info: Dict[str, Any], key_prefix: str = "usage")
         
         with col1:
             # Requests usados
-            requests_used = usage_info.get("requests_used", 0)
-            requests_limit = usage_info.get("requests_limit", 1000)
-            requests_remaining = usage_info.get("requests_remaining", 0)
+            requests_used = usage_info.get("requests_used", 0) or 0
+            requests_limit = usage_info.get("requests_limit", 1000) or 1000
+            requests_remaining = usage_info.get("requests_remaining", 0) or 0
             
             # Color basado en el porcentaje
-            usage_percentage = usage_info.get("requests_percentage", 0)
+            usage_percentage = float(usage_info.get("requests_percentage", 0) or 0)
             if usage_percentage >= 90:
                 delta_color = "inverse"
             elif usage_percentage >= 75:
@@ -72,9 +72,9 @@ def display_usage_metrics(usage_info: Dict[str, Any], key_prefix: str = "usage")
         
         with col2:
             # Tokens usados
-            tokens_used = usage_info.get("tokens_used", 0)
-            tokens_limit = usage_info.get("tokens_limit", 100000)
-            tokens_remaining = usage_info.get("tokens_remaining", 0)
+            tokens_used = usage_info.get("tokens_used", 0) or 0
+            tokens_limit = usage_info.get("tokens_limit", 100000) or 100000
+            tokens_remaining = usage_info.get("tokens_remaining", 0) or 0
             
             st.metric(
                 label="🎯 Tokens Usados",
@@ -127,9 +127,13 @@ def display_usage_progress_bar(usage_info: Dict[str, Any], key_prefix: str):
         key_prefix: Prefijo para claves
     """
     try:
-        # Configurar datos para la barra de progreso
-        requests_percentage = usage_info.get("requests_percentage", 0)
-        tokens_percentage = usage_info.get("tokens_percentage", 0)
+        # Configurar datos para la barra de progreso con valores por defecto seguros
+        requests_percentage = float(usage_info.get("requests_percentage", 0) or 0)
+        tokens_percentage = float(usage_info.get("tokens_percentage", 0) or 0)
+        
+        # Asegurar que los valores estén en rango válido
+        requests_percentage = max(0, min(100, requests_percentage))
+        tokens_percentage = max(0, min(100, tokens_percentage))
         
         st.subheader("📊 Progreso de Uso Diario")
         
@@ -147,25 +151,31 @@ def display_usage_progress_bar(usage_info: Dict[str, Any], key_prefix: str):
             else:
                 bar_color = "#00aa44"  # Verde
             
-            # Crear gráfico de barra
-            fig_requests = go.Figure(go.Bar(
-                x=[requests_percentage],
-                y=["Uso"],
-                orientation='h',
-                marker_color=bar_color,
-                text=f"{requests_percentage:.1f}%",
-                textposition='middle right'
-            ))
-            
-            fig_requests.update_layout(
-                xaxis=dict(range=[0, 100], title="Porcentaje"),
-                yaxis=dict(showticklabels=False),
-                height=100,
-                margin=dict(l=0, r=0, t=0, b=0),
-                showlegend=False
-            )
-            
-            st.plotly_chart(fig_requests, use_container_width=True, key=f"{key_prefix}_requests_bar")
+            # Crear gráfico de barra con validación de datos
+            try:
+                fig_requests = go.Figure(go.Bar(
+                    x=[requests_percentage],
+                    y=["Uso"],
+                    orientation='h',
+                    marker_color=bar_color,
+                    text=f"{requests_percentage:.1f}%",
+                    textposition='middle right' if requests_percentage > 5 else 'outside'
+                ))
+                
+                fig_requests.update_layout(
+                    xaxis=dict(range=[0, 100], title="Porcentaje"),
+                    yaxis=dict(showticklabels=False),
+                    height=100,
+                    margin=dict(l=0, r=0, t=0, b=0),
+                    showlegend=False
+                )
+                
+                st.plotly_chart(fig_requests, use_container_width=True, key=f"{key_prefix}_requests_bar")
+                
+            except Exception as chart_error:
+                # Fallback simple si falla el gráfico
+                st.progress(requests_percentage / 100.0)
+                st.caption(f"Uso: {requests_percentage:.1f}%")
         
         with col2:
             st.write("**🎯 Tokens**")
@@ -178,24 +188,30 @@ def display_usage_progress_bar(usage_info: Dict[str, Any], key_prefix: str):
             else:
                 bar_color = "#0066cc"  # Azul
             
-            fig_tokens = go.Figure(go.Bar(
-                x=[tokens_percentage],
-                y=["Uso"],
-                orientation='h',
-                marker_color=bar_color,
-                text=f"{tokens_percentage:.1f}%",
-                textposition='middle right'
-            ))
-            
-            fig_tokens.update_layout(
-                xaxis=dict(range=[0, 100], title="Porcentaje"),
-                yaxis=dict(showticklabels=False),
-                height=100,
-                margin=dict(l=0, r=0, t=0, b=0),
-                showlegend=False
-            )
-            
-            st.plotly_chart(fig_tokens, use_container_width=True, key=f"{key_prefix}_tokens_bar")
+            try:
+                fig_tokens = go.Figure(go.Bar(
+                    x=[tokens_percentage],
+                    y=["Uso"],
+                    orientation='h',
+                    marker_color=bar_color,
+                    text=f"{tokens_percentage:.1f}%",
+                    textposition='middle right' if tokens_percentage > 5 else 'outside'
+                ))
+                
+                fig_tokens.update_layout(
+                    xaxis=dict(range=[0, 100], title="Porcentaje"),
+                    yaxis=dict(showticklabels=False),
+                    height=100,
+                    margin=dict(l=0, r=0, t=0, b=0),
+                    showlegend=False
+                )
+                
+                st.plotly_chart(fig_tokens, use_container_width=True, key=f"{key_prefix}_tokens_bar")
+                
+            except Exception as chart_error:
+                # Fallback simple si falla el gráfico
+                st.progress(tokens_percentage / 100.0)
+                st.caption(f"Uso: {tokens_percentage:.1f}%")
         
         # Información adicional
         if requests_percentage >= 75 or tokens_percentage >= 75:
@@ -203,10 +219,18 @@ def display_usage_progress_bar(usage_info: Dict[str, Any], key_prefix: str):
                 st.error("🚨 **Uso crítico**: Te estás acercando al límite diario")
             else:
                 st.warning("⚠️ **Uso alto**: Considera moderar el uso para no agotar el límite")
+        elif requests_percentage == 0 and tokens_percentage == 0:
+            st.info("💡 **Sin uso registrado**: Haz una consulta para ver el progreso")
         
     except Exception as e:
         logger.error(f"Error mostrando barra de progreso: {e}")
-        st.error("Error mostrando progreso de uso")
+        # Fallback muy simple
+        st.write("📊 **Progreso de Uso Diario**")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write("🔥 **Consultas**: Sin datos disponibles")
+        with col2:
+            st.write("🎯 **Tokens**: Sin datos disponibles")
 
 def display_detailed_stats(usage_info: Dict[str, Any]):
     """
@@ -220,17 +244,17 @@ def display_detailed_stats(usage_info: Dict[str, Any]):
         
         with col1:
             st.write("**📊 Detalles de Requests**")
-            st.write(f"• Usados: {usage_info.get('requests_used', 0):,}")
-            st.write(f"• Límite: {usage_info.get('requests_limit', 0):,}")
-            st.write(f"• Disponibles: {usage_info.get('requests_remaining', 0):,}")
-            st.write(f"• Porcentaje: {usage_info.get('requests_percentage', 0):.1f}%")
+            st.write(f"• Usados: {usage_info.get('requests_used', 0) or 0:,}")
+            st.write(f"• Límite: {usage_info.get('requests_limit', 0) or 0:,}")
+            st.write(f"• Disponibles: {usage_info.get('requests_remaining', 0) or 0:,}")
+            st.write(f"• Porcentaje: {float(usage_info.get('requests_percentage', 0) or 0):.1f}%")
         
         with col2:
             st.write("**🎯 Detalles de Tokens**")
-            st.write(f"• Usados: {usage_info.get('tokens_used', 0):,}")
-            st.write(f"• Límite: {usage_info.get('tokens_limit', 0):,}")
-            st.write(f"• Disponibles: {usage_info.get('tokens_remaining', 0):,}")
-            st.write(f"• Porcentaje: {usage_info.get('tokens_percentage', 0):.1f}%")
+            st.write(f"• Usados: {usage_info.get('tokens_used', 0) or 0:,}")
+            st.write(f"• Límite: {usage_info.get('tokens_limit', 0) or 0:,}")
+            st.write(f"• Disponibles: {usage_info.get('tokens_remaining', 0) or 0:,}")
+            st.write(f"• Porcentaje: {float(usage_info.get('tokens_percentage', 0) or 0):.1f}%")
         
         # Estadísticas de tiempo
         last_request = usage_info.get("last_request")
