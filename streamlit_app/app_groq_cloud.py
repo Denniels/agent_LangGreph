@@ -19,7 +19,7 @@ import traceback
 
 # Configuración de página
 st.set_page_config(
-    page_title="🤖 Agente IoT Avanzado - Sistema Completo",
+    page_title="Agente IoT Avanzado - Sistema Completo",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
