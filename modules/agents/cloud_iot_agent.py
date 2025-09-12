@@ -16,6 +16,7 @@ import streamlit as st
 from modules.agents.groq_integration import GroqIntegration
 from modules.tools.jetson_api_connector import JetsonAPIConnector
 from modules.agents.langgraph_state import IoTAgentState, create_initial_state
+from modules.utils.usage_tracker import usage_tracker
 
 # LangGraph imports
 from langgraph.graph import StateGraph, END
@@ -361,6 +362,35 @@ La API de la Jetson no está respondiendo. Por favor:
         try:
             logger.info("🤖 Ejecutando response_generator_node (Cloud con Groq)")
             
+            # 1. Verificar límites de uso antes de hacer la consulta
+            can_make_request, usage_message = usage_tracker.check_can_make_request(self.groq_model)
+            
+            if not can_make_request:
+                logger.warning(f"⚠️ Límite de uso alcanzado: {usage_message}")
+                state["final_response"] = f"""
+🚨 **LÍMITE DE USO DIARIO ALCANZADO**
+
+{usage_message}
+
+📊 **Información del límite**:
+- Los límites se resetean automáticamente cada día
+- Modelo actual: {self.groq_model}
+
+🔄 **Alternativas**:
+- Esperar al reseteo diario (medianoche UTC)
+- Continuar mañana cuando se renueven los límites
+- Contactar al administrador si necesitas más consultas
+
+💡 **Información**: Este sistema de control nos ayuda a mantener el servicio gratuito y disponible para todos los usuarios.
+"""
+                state["execution_status"] = "usage_limit_reached"
+                state["usage_info"] = usage_tracker.get_usage_info(self.groq_model)
+                return state
+            
+            # Mostrar información de uso actual si hay advertencia
+            if "warning" in usage_message.lower() or "crítico" in usage_message.lower():
+                logger.info(f"📊 {usage_message}")
+            
             user_query = state["user_query"]
             formatted_data = state.get("formatted_data", "")
             
@@ -401,13 +431,28 @@ La API de la Jetson no está respondiendo. Por favor:
             Analiza los datos reales disponibles siguiendo estas reglas exactas.
             """
             
-            # Generar respuesta con Groq
+            # 2. Generar respuesta con Groq
             response = self.groq_integration.generate_response(prompt, model=self.groq_model)
             
-            state["final_response"] = response
-            state["execution_status"] = "response_generated"
+            # 3. Registrar uso de la consulta (estimar tokens basado en longitud)
+            estimated_tokens = len(prompt) // 4 + len(response) // 4  # Estimación aproximada
+            usage_info = usage_tracker.track_request(self.groq_model, estimated_tokens)
             
-            logger.info("   ✅ Respuesta generada con Groq")
+            # 4. Agregar información de uso a la respuesta si está cerca del límite
+            usage_footer = ""
+            if usage_info["status"] in ["warning", "critical"]:
+                remaining_percentage = 100 - usage_info["requests_percentage"]
+                usage_footer = f"""
+
+---
+📊 **Uso de API**: {usage_info['requests_used']}/{usage_info['requests_limit']} consultas ({remaining_percentage:.1f}% disponible)
+"""
+            
+            state["final_response"] = response + usage_footer
+            state["execution_status"] = "response_generated"
+            state["usage_info"] = usage_info
+            
+            logger.info(f"   ✅ Respuesta generada con Groq - Uso: {usage_info['requests_used']}/{usage_info['requests_limit']}")
             return state
             
         except Exception as e:
@@ -644,10 +689,10 @@ La API de la Jetson no está respondiendo. Por favor:
     
     async def health_check(self) -> Dict[str, Any]:
         """
-        Verificar estado de salud del agente cloud.
+        Verificar estado de salud del agente cloud incluyendo uso de API.
         
         Returns:
-            Dict con estado de salud
+            Dict con estado de salud y uso de API
         """
         try:
             health = {
@@ -668,6 +713,23 @@ La API de la Jetson no está respondiendo. Por favor:
                     health["jetson_status"] = jetson_test.get("status", "error")
                 else:
                     health["jetson_status"] = "not_configured"
+                
+                # Agregar información de uso de API
+                usage_info = usage_tracker.get_usage_info(self.groq_model)
+                health["api_usage"] = {
+                    "model": self.groq_model,
+                    "model_description": usage_info.get("model_description", "Desconocido"),
+                    "requests_used": usage_info.get("requests_used", 0),
+                    "requests_limit": usage_info.get("requests_limit", 0),
+                    "requests_remaining": usage_info.get("requests_remaining", 0),
+                    "tokens_used": usage_info.get("tokens_used", 0),
+                    "tokens_limit": usage_info.get("tokens_limit", 0),
+                    "tokens_remaining": usage_info.get("tokens_remaining", 0),
+                    "usage_percentage": usage_info.get("requests_percentage", 0),
+                    "status": usage_info.get("status", "unknown"),
+                    "can_make_request": usage_info.get("can_make_request", True),
+                    "daily_reset_date": usage_info.get("date", "unknown")
+                }
             
             health["overall_status"] = "healthy" if all([
                 health["agent_status"] == "healthy",

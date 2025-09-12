@@ -4,6 +4,7 @@ groq>=0.30.0
 requests>=2.31.0
 python-dotenv>=1.0.0
 nest-asyncio>=1.5.0
+loguru>=0.7.0
 
 # LangChain dependencies
 langchain-core>=0.1.0

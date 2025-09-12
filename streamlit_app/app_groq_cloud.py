@@ -35,6 +35,12 @@ try:
     from modules.agents.cloud_iot_agent import CloudIoTAgent
     from modules.tools.jetson_api_connector import JetsonAPIConnector
     from modules.agents.reporting import ReportGenerator
+    from modules.utils.usage_tracker import usage_tracker
+    from modules.utils.streamlit_usage_display import (
+        display_usage_metrics, 
+        display_usage_alert,
+        display_model_limits_info
+    )
     
     # Variables de configuración
     GROQ_API_KEY = os.getenv('GROQ_API_KEY')
@@ -500,6 +506,139 @@ def render_reports_tab():
                 st.code(traceback.format_exc())
 
 # ===============================
+# PESTAÑA 3: USO DE API
+# ===============================
+
+def render_usage_tab():
+    """Renderizar pestaña de uso de API"""
+    
+    st.header("📈 Seguimiento de Uso de API")
+    st.markdown("Monitorea tu uso diario de las APIs de Groq y evita sobrepasar los límites.")
+    
+    try:
+        # Obtener modelo actual del agente
+        cloud_agent, _, _ = initialize_services()
+        current_model = "llama-3.1-8b-instant"  # Modelo por defecto
+        
+        if cloud_agent:
+            current_model = cloud_agent.groq_model
+        
+        # Obtener información de uso del modelo actual
+        usage_info = usage_tracker.get_usage_info(current_model)
+        
+        # Mostrar alerta si es necesaria
+        display_usage_alert(usage_info)
+        
+        # Mostrar métricas principales
+        display_usage_metrics(usage_info, "main_usage")
+        
+        st.markdown("---")
+        
+        # Sección de resumen diario
+        st.subheader("📊 Resumen Diario")
+        
+        daily_summary = usage_tracker.get_daily_summary()
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric(
+                "🔥 Total Consultas Hoy",
+                f"{daily_summary['total_requests_today']:,}",
+                help="Total de consultas realizadas hoy"
+            )
+        
+        with col2:
+            st.metric(
+                "🎯 Total Tokens Hoy",
+                f"{daily_summary['total_tokens_today']:,}",
+                help="Total de tokens utilizados hoy"
+            )
+        
+        with col3:
+            st.metric(
+                "🤖 Modelos Usados",
+                daily_summary['models_used_today'],
+                help="Número de modelos diferentes utilizados"
+            )
+        
+        with col4:
+            from modules.utils.streamlit_usage_display import get_time_until_reset
+            st.metric(
+                "⏰ Reset en",
+                get_time_until_reset(),
+                help="Tiempo hasta el próximo reset diario"
+            )
+        
+        # Sección de todos los modelos
+        st.markdown("---")
+        st.subheader("🤖 Uso por Modelo")
+        
+        all_models_usage = usage_tracker.get_all_models_usage()
+        
+        # Crear tabla de modelos
+        model_data = []
+        for model_id, model_info in all_models_usage.items():
+            model_data.append({
+                "Modelo": model_info["model_description"],
+                "Consultas": f"{model_info['requests_used']:,}/{model_info['requests_limit']:,}",
+                "Tokens": f"{model_info['tokens_used']:,}/{model_info['tokens_limit']:,}",
+                "Uso %": f"{model_info['requests_percentage']:.1f}%",
+                "Estado": {
+                    "normal": "✅ Normal",
+                    "warning": "⚠️ Advertencia", 
+                    "critical": "🚨 Crítico"
+                }.get(model_info["status"], "❓ Desconocido"),
+                "Disponible": "Sí" if model_info["can_make_request"] else "No"
+            })
+        
+        if model_data:
+            import pandas as pd
+            df = pd.DataFrame(model_data)
+            st.dataframe(df, use_container_width=True)
+        
+        # Información de límites
+        st.markdown("---")
+        display_model_limits_info()
+        
+        # Botones de control
+        st.markdown("---")
+        st.subheader("🔧 Controles")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("🔄 Actualizar Datos", use_container_width=True):
+                st.rerun()
+        
+        with col2:
+            if st.button("📊 Health Check", use_container_width=True):
+                with st.spinner("Verificando estado..."):
+                    import asyncio
+                    health = asyncio.run(cloud_agent.health_check()) if cloud_agent else {}
+                    
+                    if health.get("overall_status") == "healthy":
+                        st.success("✅ Sistema saludable")
+                    else:
+                        st.warning("⚠️ Sistema con problemas")
+                    
+                    with st.expander("Detalles de Health Check"):
+                        st.json(health)
+        
+        with col3:
+            # Botón de reset solo para desarrollo/testing
+            if st.button("🚨 Reset Contadores (Dev)", use_container_width=True, help="Solo para desarrollo - no usar en producción"):
+                if st.button("⚠️ Confirmar Reset", type="secondary"):
+                    usage_tracker.force_reset()
+                    st.success("✅ Contadores reseteados")
+                    st.rerun()
+        
+    except Exception as e:
+        st.error(f"❌ Error mostrando información de uso: {str(e)}")
+        st.write("**Detalles del error:**")
+        st.code(traceback.format_exc())
+
+# ===============================
 # SIDEBAR Y NAVEGACIÓN PRINCIPAL
 # ===============================
 
@@ -541,6 +680,39 @@ def render_sidebar():
         
         st.markdown("---")
         
+        # Información de uso de API
+        st.subheader("📊 Uso de API")
+        try:
+            current_model = "llama-3.1-8b-instant"
+            if groq_agent:
+                current_model = groq_agent.groq_model
+            
+            usage_info = usage_tracker.get_usage_info(current_model)
+            
+            # Mostrar métricas compactas
+            st.metric(
+                "🔥 Consultas",
+                f"{usage_info['requests_used']}/{usage_info['requests_limit']}",
+                delta=f"{usage_info['requests_percentage']:.1f}% usado"
+            )
+            
+            # Estado visual
+            status = usage_info.get("status", "normal")
+            if status == "critical":
+                st.error("🚨 Uso crítico")
+            elif status == "warning":
+                st.warning("⚠️ Uso alto")
+            else:
+                st.success("✅ Uso normal")
+                
+            # Enlace a pestaña de detalles
+            st.caption("👆 Ve a la pestaña 'Uso de API' para más detalles")
+            
+        except Exception as e:
+            st.error("❌ Error cargando uso de API")
+        
+        st.markdown("---")
+        
         # Estadísticas de sesión
         st.subheader("📈 Estadísticas")
         
@@ -572,13 +744,16 @@ def main():
     st.markdown("**Análisis inteligente de sensores IoT con generación de reportes profesionales**")
     
     # Crear pestañas
-    tab1, tab2 = st.tabs(["💬 Chat IoT Agent", "📊 Generador de Reportes"])
+    tab1, tab2, tab3 = st.tabs(["💬 Chat IoT Agent", "📊 Generador de Reportes", "📈 Uso de API"])
     
     with tab1:
         render_chat_tab()
     
     with tab2:
         render_reports_tab()
+    
+    with tab3:
+        render_usage_tab()
     
     # Footer
     st.markdown("---")
