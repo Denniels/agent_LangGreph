@@ -29,16 +29,25 @@ El sistema de seguimiento de uso de API permite monitorear y controlar el uso di
 - ✅ Gráficos de progreso con barras de color
 - ✅ Tablas de todos los modelos disponibles
 
-## 🤖 Modelos Soportados y Límites
+## 🤖 Modelos Soportados y Límites (ACTUALIZADOS Sep 2025)
 
 | Modelo | Descripción | Requests/día | Tokens/día |
 |--------|-------------|--------------|------------|
-| `llama-3.1-8b-instant` | Llama 3.1 8B Instant | 30,000 | 1,000,000 |
-| `llama-3.1-70b-versatile` | Llama 3.1 70B Versatile | 6,000 | 1,000,000 |
-| `llama3-8b-8192` | Llama 3 8B | 30,000 | 1,000,000 |
-| `llama3-70b-8192` | Llama 3 70B | 6,000 | 1,000,000 |
-| `mixtral-8x7b-32768` | Mixtral 8x7B | 5,000 | 1,000,000 |
-| `gemma-7b-it` | Gemma 7B IT | 15,000 | 1,000,000 |
+| `llama-3.1-8b-instant` | Llama 3.1 8B Instant | 14,400 | 1,000,000 |
+| `llama-3.3-70b-versatile` | Llama 3.3 70B Versatile | 1,000 | 1,000,000 |
+| `meta-llama/llama-guard-4-12b` | Meta Llama Guard 4 12B | 14,400 | 1,000,000 |
+| `groq/compound` | Groq Compound | 250 | 1,000,000 |
+| `groq/compound-mini` | Groq Compound Mini | 250 | 1,000,000 |
+| `gemma2-9b-it` | Gemma 2 9B IT | 14,400 | 1,000,000 |
+
+### 📋 Modelos Legacy (Compatibilidad)
+| Modelo | Descripción | Requests/día | Tokens/día |
+|--------|-------------|--------------|------------|
+| `llama-3.1-70b-versatile` | Llama 3.1 70B Versatile | 1,000 | 1,000,000 |
+| `llama3-8b-8192` | Llama 3 8B | 14,400 | 1,000,000 |
+| `llama3-70b-8192` | Llama 3 70B | 1,000 | 1,000,000 |
+| `mixtral-8x7b-32768` | Mixtral 8x7B | 14,400 | 1,000,000 |
+| `gemma-7b-it` | Gemma 7B IT | 14,400 | 1,000,000 |
 
 ## 🏗️ Arquitectura del Sistema
 

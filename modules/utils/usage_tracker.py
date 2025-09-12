@@ -22,37 +22,66 @@ class UsageTracker:
         self.data_file = Path(data_file)
         self.usage_data = self._load_usage_data()
         
-        # Límites diarios por modelo Groq (actualizados según documentación oficial)
+        # Límites diarios por modelo Groq (ACTUALIZADOS según documentación oficial Sep 2025)
         self.daily_limits = {
+            # Modelos principales
             "llama-3.1-8b-instant": {
-                "requests": 30000,  # 30K requests por día
+                "requests": 14400,  # 14.4K requests por día (OFICIAL)
                 "tokens": 1000000,  # 1M tokens por día
                 "description": "Llama 3.1 8B Instant"
             },
-            "llama-3.1-70b-versatile": {
-                "requests": 6000,   # 6K requests por día
+            "llama-3.3-70b-versatile": {
+                "requests": 1000,   # 1K requests por día (OFICIAL)
+                "tokens": 1000000,  # 1M tokens por día  
+                "description": "Llama 3.3 70B Versatile"
+            },
+            # Nuevos modelos detectados
+            "meta-llama/llama-guard-4-12b": {
+                "requests": 14400,  # 14.4K requests por día (OFICIAL)
                 "tokens": 1000000,  # 1M tokens por día
-                "description": "Llama 3.1 70B Versatile"
+                "description": "Meta Llama Guard 4 12B"
+            },
+            "groq/compound": {
+                "requests": 250,    # 250 requests por día (OFICIAL)
+                "tokens": 1000000,  # 1M tokens por día
+                "description": "Groq Compound"
+            },
+            "groq/compound-mini": {
+                "requests": 250,    # 250 requests por día (OFICIAL)
+                "tokens": 1000000,  # 1M tokens por día
+                "description": "Groq Compound Mini"
+            },
+            "gemma2-9b-it": {
+                "requests": 14400,  # 14.4K requests por día (OFICIAL)
+                "tokens": 1000000,  # 1M tokens por día
+                "description": "Gemma 2 9B IT"
+            },
+            
+            # Modelos legacy (mantenidos por compatibilidad)
+            "llama-3.1-70b-versatile": {
+                "requests": 1000,   # Asumir mismo límite que 3.3-70b
+                "tokens": 1000000,
+                "description": "Llama 3.1 70B Versatile (Legacy)"
             },
             "llama3-8b-8192": {
-                "requests": 30000,  # 30K requests por día
-                "tokens": 1000000,  # 1M tokens por día
-                "description": "Llama 3 8B"
+                "requests": 14400,  # Asumir mismo límite que 3.1-8b
+                "tokens": 1000000,
+                "description": "Llama 3 8B (Legacy)"
             },
             "llama3-70b-8192": {
-                "requests": 6000,   # 6K requests por día
-                "tokens": 1000000,  # 1M tokens por día
-                "description": "Llama 3 70B"
+                "requests": 1000,   # Asumir mismo límite que otros 70B
+                "tokens": 1000000,
+                "description": "Llama 3 70B (Legacy)"
             },
             "mixtral-8x7b-32768": {
-                "requests": 5000,   # 5K requests por día
-                "tokens": 1000000,  # 1M tokens por día
+                "requests": 14400,  # Estimado basado en capacidad similar
+                "tokens": 1000000,
                 "description": "Mixtral 8x7B"
             },
             "gemma-7b-it": {
-                "requests": 15000,  # 15K requests por día
-                "tokens": 1000000,  # 1M tokens por día
-                "description": "Gemma 7B IT"
+                "requests": 14400,  # Estimado basado en Gemma2
+                "tokens": 1000000,
+                "description": "Gemma 7B IT (Legacy)"
             }
         }
     

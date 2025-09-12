@@ -332,20 +332,58 @@ def display_model_limits_info():
     try:
         st.subheader("📋 Límites por Modelo - Groq")
         
-        # Información de límites (desde usage_tracker)
+        # Información de límites actualizados (desde usage_tracker)
         from modules.utils.usage_tracker import usage_tracker
         
+        # Modelos principales (OFICIALES Sep 2025)
         models_info = [
-            ("llama-3.1-8b-instant", "Llama 3.1 8B Instant", "30,000", "1M"),
-            ("llama-3.1-70b-versatile", "Llama 3.1 70B Versatile", "6,000", "1M"),
-            ("llama3-8b-8192", "Llama 3 8B", "30,000", "1M"),
-            ("llama3-70b-8192", "Llama 3 70B", "6,000", "1M"),
-            ("mixtral-8x7b-32768", "Mixtral 8x7B", "5,000", "1M"),
-            ("gemma-7b-it", "Gemma 7B IT", "15,000", "1M")
+            ("llama-3.1-8b-instant", "Llama 3.1 8B Instant", "14,400", "1M"),
+            ("llama-3.3-70b-versatile", "Llama 3.3 70B Versatile", "1,000", "1M"),
+            ("meta-llama/llama-guard-4-12b", "Meta Llama Guard 4 12B", "14,400", "1M"),
+            ("groq/compound", "Groq Compound", "250", "1M"),
+            ("groq/compound-mini", "Groq Compound Mini", "250", "1M"),
+            ("gemma2-9b-it", "Gemma 2 9B IT", "14,400", "1M"),
         ]
+        
+        # Modelos legacy
+        legacy_models_info = [
+            ("llama-3.1-70b-versatile", "Llama 3.1 70B Versatile (Legacy)", "1,000", "1M"),
+            ("llama3-8b-8192", "Llama 3 8B (Legacy)", "14,400", "1M"),
+            ("llama3-70b-8192", "Llama 3 70B (Legacy)", "1,000", "1M"),
+            ("mixtral-8x7b-32768", "Mixtral 8x7B", "14,400", "1M"),
+            ("gemma-7b-it", "Gemma 7B IT (Legacy)", "14,400", "1M")
+        ]
+        
+        # Mostrar modelos principales
+        st.write("### 🔥 Modelos Principales (Oficial)")
         
         # Crear tabla
         for model_id, description, requests, tokens in models_info:
+            with st.expander(f"🤖 {description}"):
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("🔥 Requests/día", requests)
+                
+                with col2:
+                    st.metric("🎯 Tokens/día", tokens)
+                
+                with col3:
+                    # Mostrar uso actual si es el modelo activo
+                    current_usage = usage_tracker.get_usage_info(model_id)
+                    if current_usage["requests_used"] > 0:
+                        st.metric(
+                            "📊 Uso actual", 
+                            f"{current_usage['requests_used']} requests",
+                            delta=f"{current_usage['requests_percentage']:.1f}% usado"
+                        )
+                    else:
+                        st.metric("📊 Uso actual", "Sin uso")
+        
+        # Mostrar modelos legacy
+        st.write("### 📦 Modelos Legacy (Compatibilidad)")
+        
+        for model_id, description, requests, tokens in legacy_models_info:
             with st.expander(f"🤖 {description}"):
                 col1, col2, col3 = st.columns(3)
                 
@@ -374,6 +412,7 @@ def display_model_limits_info():
         - Groq es completamente gratuito - no requiere tarjeta de crédito
         - Los límites nos ayudan a mantener el servicio disponible para todos
         - Puedes cambiar de modelo si alcanzas un límite
+        - ⚠️ **ACTUALIZADO Sep 2025**: Límites oficiales de Groq
         """)
     
     except Exception as e:
