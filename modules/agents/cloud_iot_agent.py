@@ -368,32 +368,37 @@ La API de la Jetson no está respondiendo. Por favor:
             prompt = f"""
             Eres un asistente experto en análisis de datos de sensores IoT.
             
-            CONFIGURACIÓN REAL DE DISPOSITIVOS (IMPORTANTE - NO DESVIAR):
+            CONFIGURACIÓN REAL DE DISPOSITIVOS (IMPORTANTE - SEGUIR EXACTAMENTE):
             
             🔧 ARDUINO ETHERNET (arduino_eth_001):
             - IP: 192.168.0.106
-            - SENSORES: SOLO t1, t2, avg (temperaturas únicamente)
-            - NO TIENE: LDR, sensor de luz, luminosidad
+            - SENSORES DISPONIBLES: t1, t2, avg (SOLO temperaturas)
+            - NO TIENE: LDR, sensor de luz, luminosidad, fotoresistor
             
             📡 ESP32 WIFI (esp32_wifi_001):
             - IP: 192.168.0.105  
-            - SENSORES: ntc_entrada, ntc_salida (temperaturas) + ldr (luz)
-            - TIENE: Sensores de temperatura Y sensor LDR
+            - SENSORES DISPONIBLES: ntc_entrada, ntc_salida (temperaturas) + ldr (sensor de luz)
+            - SÍ TIENE: Sensores de temperatura Y sensor LDR para luminosidad
             
             CONSULTA DEL USUARIO: {user_query}
             
             DATOS REALES DE SENSORES:
             {formatted_data}
             
-            INSTRUCCIONES CRÍTICAS:
-            1. Analiza ÚNICAMENTE los datos mostrados arriba
-            2. NUNCA menciones LDR para Arduino Ethernet
-            3. Solo ESP32 WiFi tiene sensor LDR
-            4. NO inventes datos que no están presentes
-            5. Sé específico sobre qué dispositivo tiene qué sensores
-            6. Si se pregunta por LDR del Arduino, aclara que NO lo tiene
+            REGLAS DE ANÁLISIS (CUMPLIR ESTRICTAMENTE):
+            1. ✅ INCLUIR datos de LDR SOLO si se refiere a ESP32 WiFi
+            2. ❌ NUNCA mencionar LDR para Arduino Ethernet (no existe)
+            3. ✅ Arduino Ethernet SOLO tiene temperaturas (t1, t2, avg)
+            4. ✅ ESP32 WiFi tiene temperaturas (ntc_entrada, ntc_salida) Y ldr
+            5. 📊 Analiza TODOS los sensores disponibles del dispositivo consultado
+            6. 🚫 NO inventes sensores que no existen en la configuración
+            7. 📍 Especifica claramente qué dispositivo tiene qué sensores
             
-            Proporciona un análisis claro y preciso basado en esta configuración real.
+            EJEMPLO DE RESPUESTA CORRECTA:
+            - "El ESP32 WiFi muestra temperaturas de 25°C y 26°C en ntc_entrada y ntc_salida, además de 450 unidades en el sensor LDR"
+            - "El Arduino Ethernet registra 24°C en t1, 25°C en t2, con promedio de 24.5°C (no tiene sensor LDR)"
+            
+            Analiza los datos reales disponibles siguiendo estas reglas exactas.
             """
             
             # Generar respuesta con Groq

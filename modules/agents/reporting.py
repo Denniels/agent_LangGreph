@@ -470,52 +470,125 @@ class ReportGenerator:
         return fig
     
     def export_figure_png(self, fig: go.Figure, width: int = 1200, height: int = 600) -> bytes:
-        """Exporta figura Plotly a PNG usando kaleido"""
+        """Exporta figura Plotly a PNG usando kaleido con fallback robusto"""
         try:
             logger.info(f"Intentando exportar figura a PNG - width: {width}, height: {height}")
             
-            # Configurar kaleido explícitamente
-            pio.kaleido.scope.default_width = width
-            pio.kaleido.scope.default_height = height
-            
-            # Intentar exportar
-            img_bytes = pio.to_image(fig, format="png", width=width, height=height, scale=1)
-            
-            if img_bytes and len(img_bytes) > 0:
-                logger.info(f"Figura exportada exitosamente - tamaño: {len(img_bytes)} bytes")
-                return img_bytes
-            else:
-                logger.error("La exportación devolvió bytes vacíos")
-                return self._create_fallback_image()
+            # Método 1: Intentar con kaleido
+            try:
+                # Configurar kaleido explícitamente
+                pio.kaleido.scope.default_width = width
+                pio.kaleido.scope.default_height = height
+                pio.kaleido.scope.default_scale = 1
+                
+                # Intentar exportar
+                img_bytes = pio.to_image(fig, format="png", width=width, height=height, scale=1)
+                
+                if img_bytes and len(img_bytes) > 1000:  # Al menos 1KB para ser válido
+                    logger.info(f"✅ Figura exportada con kaleido - tamaño: {len(img_bytes)} bytes")
+                    return img_bytes
+                else:
+                    logger.warning("Kaleido devolvió imagen muy pequeña, intentando método alternativo")
+                    raise Exception("Imagen kaleido muy pequeña")
+                    
+            except Exception as kaleido_error:
+                logger.warning(f"Kaleido falló: {kaleido_error}, intentando método alternativo")
+                
+                # Método 2: Usar plotly con orca (si está disponible)
+                try:
+                    img_bytes = pio.to_image(fig, format="png", width=width, height=height, engine="orca")
+                    if img_bytes and len(img_bytes) > 1000:
+                        logger.info(f"✅ Figura exportada con orca - tamaño: {len(img_bytes)} bytes")
+                        return img_bytes
+                except:
+                    pass
+                
+                # Método 3: Fallback a matplotlib
+                return self._create_matplotlib_chart(fig, width, height)
                 
         except Exception as e:
             logger.error(f"Error exporting figure to PNG: {e}")
             logger.error(f"Tipo de error: {type(e).__name__}")
             return self._create_fallback_image()
     
+    def _create_matplotlib_chart(self, fig: go.Figure, width: int, height: int) -> bytes:
+        """Convierte figura plotly a matplotlib y exporta"""
+        try:
+            import matplotlib.pyplot as plt
+            import matplotlib
+            matplotlib.use('Agg')  # Backend sin GUI
+            
+            logger.info("Generando gráfico con matplotlib como fallback")
+            
+            # Extraer datos de la figura plotly
+            trace = fig.data[0] if fig.data else None
+            if not trace:
+                return self._create_fallback_image()
+            
+            plt.figure(figsize=(width/100, height/100))
+            
+            if hasattr(trace, 'type'):
+                if trace.type == 'scatter':
+                    if hasattr(trace, 'mode') and 'lines' in trace.mode:
+                        plt.plot(trace.x, trace.y, marker='o' if 'markers' in trace.mode else '', linewidth=2)
+                    else:
+                        plt.scatter(trace.x, trace.y)
+                elif trace.type == 'bar':
+                    plt.bar(range(len(trace.y)), trace.y)
+                    if hasattr(trace, 'x') and trace.x:
+                        plt.xticks(range(len(trace.x)), [str(x)[:10] for x in trace.x], rotation=45)
+                elif trace.type == 'pie':
+                    plt.pie(trace.values, labels=trace.labels, autopct='%1.1f%%')
+                else:
+                    # Gráfico genérico
+                    plt.plot(trace.y)
+            
+            # Configurar estilo
+            plt.title(fig.layout.title.text if fig.layout.title else "Gráfico de Sensores IoT")
+            plt.grid(True, alpha=0.3)
+            plt.tight_layout()
+            
+            # Exportar
+            buffer = BytesIO()
+            plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight', 
+                       facecolor='white', edgecolor='none')
+            plt.close()
+            buffer.seek(0)
+            
+            img_bytes = buffer.read()
+            logger.info(f"✅ Figura generada con matplotlib - tamaño: {len(img_bytes)} bytes")
+            return img_bytes
+            
+        except Exception as e:
+            logger.error(f"Error creando gráfico con matplotlib: {e}")
+            return self._create_fallback_image()
+    
     def _create_fallback_image(self) -> bytes:
-        """Crea una imagen de respaldo usando matplotlib si kaleido falla"""
+        """Crea una imagen de respaldo usando matplotlib si todo falla"""
         try:
             import matplotlib.pyplot as plt
             import matplotlib
             matplotlib.use('Agg')  # Backend sin GUI
             
             fig, ax = plt.subplots(figsize=(8, 4))
-            ax.text(0.5, 0.5, 'Gráfico no disponible\n(Error de kaleido)', 
-                   ha='center', va='center', fontsize=12,
-                   bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray"))
+            ax.text(0.5, 0.5, '📊 Gráfico IoT\n\n(Datos disponibles en tabla)', 
+                   ha='center', va='center', fontsize=14,
+                   bbox=dict(boxstyle="round,pad=0.5", facecolor="lightblue", alpha=0.7))
             ax.set_xlim(0, 1)
             ax.set_ylim(0, 1)
             ax.axis('off')
+            ax.set_facecolor('white')
             
             buffer = BytesIO()
-            plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+            plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight',
+                       facecolor='white', edgecolor='none')
             plt.close(fig)
             buffer.seek(0)
             return buffer.read()
             
         except Exception as e:
             logger.error(f"Error creando imagen de respaldo: {e}")
+            # Crear imagen mínima si todo falla
             return b""
     
     def generate_pdf_from_spec(self, spec: Dict[str, Any], summary_text: str, 
