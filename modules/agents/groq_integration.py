@@ -8,6 +8,7 @@ import json
 from groq import Groq
 from typing import Optional, Dict, Any
 import logging
+from prompts.system_prompt import SYSTEM_PROMPT
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -68,7 +69,7 @@ class GroqIntegration:
                 messages=[
                     {
                         "role": "system",
-                        "content": "Eres un asistente experto en análisis de datos de sensores IoT. Proporciona análisis claros y concisos."
+                        "content": SYSTEM_PROMPT
                     },
                     {
                         "role": "user", 
@@ -77,8 +78,8 @@ class GroqIntegration:
                 ],
                 model=model,
                 max_tokens=1000,
-                temperature=0.3,
-                top_p=1,
+                temperature=0.1,  # Más bajo para reducir alucinaciones
+                top_p=0.8,        # Más conservador
                 stream=False
             )
             
@@ -135,46 +136,59 @@ class GroqIntegration:
         """
         logger.info("Usando respuesta de fallback")
         
-        # Detectar tipo de análisis basado en el prompt
+        # Respuesta conservadora sin inventar datos
         if "temperatura" in prompt.lower() or "temperature" in prompt.lower():
             return """
-            📊 **Análisis de Temperatura:**
-            - Rango detectado: 18.5°C - 28.3°C
-            - Promedio: 23.4°C
-            - Estado: Normal, dentro de parámetros operativos
-            - Recomendación: Monitoreo continuo recomendado
+            ⚠️ **Sistema en Modo Fallback**
+            
+            🔍 **Consulta sobre Temperatura**
+            - Dispositivos disponibles: ESP32 WiFi, Arduino Ethernet
+            - Sensores de temperatura: Disponibles
+            - Estado: Para obtener datos actuales, se requiere conexión con la base de datos
+            
+            💡 **Recomendación**: Verificar conectividad de red y reintenta la consulta
             """
         
-        elif "humedad" in prompt.lower() or "humidity" in prompt.lower():
+        elif "ldr" in prompt.lower() or "luz" in prompt.lower() or "light" in prompt.lower():
             return """
-            💧 **Análisis de Humedad:**
-            - Rango detectado: 45% - 78% RH
-            - Promedio: 61.5% RH
-            - Estado: Óptimo para operación de equipos
-            - Alerta: Vigilar niveles > 80% RH
+            ⚠️ **Sistema en Modo Fallback**
+            
+            🔍 **Consulta sobre Sensor LDR/Luz**
+            - Dispositivos con LDR: ESP32 WiFi
+            - Sensor de luz: Disponible
+            - Estado: Para obtener datos actuales, se requiere conexión con la base de datos
+            
+            💡 **Recomendación**: Verificar conectividad de red y reintenta la consulta
             """
         
-        elif "presión" in prompt.lower() or "pressure" in prompt.lower():
+        elif any(sensor in prompt.lower() for sensor in ["humedad", "humidity", "movimiento", "presión", "co2", "ph"]):
             return """
-            🔧 **Análisis de Presión:**
-            - Rango detectado: 1.2 - 4.8 bar
-            - Promedio: 2.9 bar
-            - Estado: Operación normal
-            - Tendencia: Estable en las últimas horas
+            ❌ **Sensor No Disponible**
+            
+            � **Sensores disponibles en nuestro sistema:**
+            - 🌡️ Temperatura (ESP32, Arduino)
+            - 💡 LDR/Luz (ESP32)
+            
+            ❌ **Sensores NO disponibles:**
+            - Humedad, Movimiento, Presión, CO2, pH, etc.
+            
+            💡 **Sugerencia**: Consulta sobre temperatura o niveles de luz
             """
         
         else:
             return """
-            🤖 **Análisis de Datos IoT:**
+            ⚠️ **Sistema en Modo Fallback**
             
-            Basado en los datos de sensores remotos recolectados:
+            🤖 **Estado actual:**
+            - Conectividad con API limitada
+            - Base de datos: Verificando conexión
             
-            ✅ **Estado General:** Operativo
-            📈 **Tendencias:** Estables
-            ⚠️ **Alertas:** Ninguna crítica detectada
+            📊 **Servicios disponibles:**
+            - Consultas sobre temperatura y luz
+            - Estado de dispositivos ESP32 y Arduino
+            - Análisis de tendencias (cuando hay conectividad)
             
-            *Nota: Análisis generado en modo offline. 
-            Para análisis más detallados, configura la API de Groq.*
+            💡 **Recomendación**: Reintenta tu consulta en unos momentos
             """
     
     def get_models(self) -> list:

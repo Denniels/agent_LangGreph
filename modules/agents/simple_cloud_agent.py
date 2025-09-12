@@ -8,7 +8,7 @@ Agente IoT minimalista para Streamlit Cloud usando solo Groq y requests.
 import os
 import asyncio
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 from datetime import datetime
 import json
 
@@ -190,17 +190,59 @@ class SimpleCloudIoTAgent:
                 if all_data:
                     return all_data
             
-            # Datos demo si no hay conexión
-            return self._get_demo_data()
+            # Sin conexión Jetson - devolver error
+            return {
+                "error": "JETSON_API_OFFLINE",
+                "message": "No se pudo conectar con la API de la Jetson",
+                "instructions": [
+                    "🔧 Verificar que la Jetson esté encendida y conectada",
+                    "📡 Revisar servicios systemd: sudo systemctl status iot-api-service",
+                    "🌐 Confirmar conectividad de red",
+                    "📋 Revisar logs: journalctl -u iot-api-service -f"
+                ]
+            }
             
         except Exception as e:
-            logger.warning(f"Error recolectando datos - usando demo: {e}")
-            return self._get_demo_data()
+            logger.error(f"Error recolectando datos de sensores: {e}")
+            return {
+                "error": "CONNECTION_ERROR",
+                "message": f"Error al conectar con sensores: {str(e)}",
+                "instructions": [
+                    "🚨 Error de conexión con la Jetson",
+                    "🔌 Verificar cables de red y alimentación",
+                    "📡 Confirmar IP de la Jetson en la red local",
+                    "🔧 Revisar configuración de firewall en la Jetson"
+                ]
+            }
 
-    def _analyze_sensor_data(self, sensor_data: List[Dict[str, Any]], query_analysis: Dict[str, Any]) -> Dict[str, Any]:
+    def _analyze_sensor_data(self, sensor_data: Union[List[Dict[str, Any]], Dict[str, Any]], query_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Analizar datos de sensores."""
-        if not sensor_data:
-            return {"error": "No hay datos disponibles"}
+        
+        # Verificar si es un error de conexión
+        if isinstance(sensor_data, dict) and "error" in sensor_data:
+            return {
+                "error": sensor_data["error"],
+                "message": sensor_data["message"],
+                "instructions": sensor_data["instructions"],
+                "total_records": 0,
+                "devices_found": set(),
+                "sensors_summary": {}
+            }
+        
+        # Verificar si hay datos válidos
+        if not sensor_data or not isinstance(sensor_data, list):
+            return {
+                "error": "NO_DATA_AVAILABLE",
+                "message": "No hay datos de sensores disponibles",
+                "instructions": [
+                    "🔧 Verificar conexión con la Jetson",
+                    "📡 Revisar servicios de recolección de datos",
+                    "🌐 Confirmar que los dispositivos IoT estén operativos"
+                ],
+                "total_records": 0,
+                "devices_found": set(),
+                "sensors_summary": {}
+            }
         
         analysis = {
             "total_records": len(sensor_data),
@@ -357,39 +399,6 @@ Responde de forma concisa y técnicamente precisa."""
                 "overall_status": "error",
                 "error": str(e)
             }
-
-    def _get_demo_data(self) -> List[Dict[str, Any]]:
-        """Generar datos demo para testing."""
-        import random
-        from datetime import datetime, timedelta
-        
-        demo_data = []
-        devices = ["esp32_wifi_001", "arduino_eth_001"]
-        
-        for i in range(40):
-            timestamp = datetime.now() - timedelta(minutes=i*5)
-            
-            for device_id in devices:
-                if device_id.startswith("esp32"):
-                    # Datos ESP32
-                    demo_data.append({
-                        "id": f"demo_{i}_{device_id}",
-                        "device_id": device_id,
-                        "timestamp": timestamp.isoformat(),
-                        "ntc_entrada": round(random.uniform(25.0, 40.0), 2),
-                        "ntc_salida": round(random.uniform(45.0, 60.0), 2),
-                        "ldr": random.randint(100, 800)
-                    })
-                else:
-                    # Datos Arduino
-                    demo_data.append({
-                        "id": f"demo_{i}_{device_id}",
-                        "device_id": device_id,
-                        "timestamp": timestamp.isoformat(),
-                        "t1": round(random.uniform(10.0, 20.0), 2),
-                        "t2": round(random.uniform(12.0, 22.0), 2),
-                        "avg": round(random.uniform(11.0, 21.0), 2)
-                    })
         
         return demo_data
 

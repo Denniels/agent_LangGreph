@@ -202,9 +202,11 @@ class CloudIoTAgent:
             
             # Verificar si Jetson está disponible
             if not self.jetson_connector:
-                logger.warning("Jetson connector no disponible - usando datos demo")
-                state["raw_data"] = self._get_demo_data()
-                state["execution_status"] = "demo_data_collected"
+                logger.error("🚨 Jetson connector no disponible")
+                jetson_status = self._check_jetson_api_status()
+                state["raw_data"] = []
+                state["execution_status"] = "jetson_api_offline"
+                state["error"] = jetson_status
                 return state
             
             # Obtener datos de Jetson
@@ -230,17 +232,21 @@ class CloudIoTAgent:
                 
                 logger.info(f"   ✅ Datos remotos recolectados: {len(all_data)} registros")
             else:
-                logger.warning("Error obteniendo dispositivos - usando datos demo")
-                state["raw_data"] = self._get_demo_data()
-                state["execution_status"] = "demo_data_collected"
+                logger.error("🚨 Error obteniendo dispositivos desde Jetson API")
+                jetson_status = self._check_jetson_api_status()
+                state["raw_data"] = []
+                state["execution_status"] = "jetson_api_error"
+                state["error"] = jetson_status
             
             return state
             
         except Exception as e:
             logger.error(f"❌ Error en remote_data_collector_node: {e}")
-            # Fallback a datos demo
-            state["raw_data"] = self._get_demo_data()
-            state["execution_status"] = "demo_data_fallback"
+            jetson_status = self._check_jetson_api_status()
+            state["raw_data"] = []
+            state["execution_status"] = "jetson_connection_error"
+            state["error"] = jetson_status
+            state["exception"] = str(e)
             return state
     
     async def _data_analyzer_node(self, state: IoTAgentState) -> IoTAgentState:
@@ -258,10 +264,39 @@ class CloudIoTAgent:
             
             raw_data = state.get("raw_data", [])
             
+            # Verificar si hay datos disponibles
             if not raw_data:
-                logger.warning("No hay datos para analizar")
-                state["formatted_data"] = "No hay datos disponibles"
+                logger.warning("🚨 No hay datos para analizar")
+                
+                # Si hay información de error de Jetson, incluirla
+                if "error" in state:
+                    error_info = state["error"]
+                    state["formatted_data"] = f"""
+🚨 ERROR: No se pudieron obtener datos de sensores
+
+{error_info.get('message', 'Error desconocido')}
+
+📋 INSTRUCCIONES PARA RESOLVER:
+"""
+                    for instruction in error_info.get('instructions', []):
+                        state["formatted_data"] += f"\n{instruction}"
+                else:
+                    state["formatted_data"] = """
+🚨 ERROR: No hay datos de sensores disponibles
+
+La API de la Jetson no está respondiendo. Por favor:
+
+🔧 Verificar que la Jetson esté encendida y conectada a la red
+📡 Confirmar que los servicios systemd estén ejecutándose:
+   sudo systemctl status iot-api-service
+   sudo systemctl status sensor-collector-service
+🌐 Verificar conectividad de red desde la Jetson
+📋 Revisar logs del sistema: journalctl -u iot-api-service -f
+🔄 Reiniciar servicios si es necesario: sudo systemctl restart iot-api-service
+"""
+                
                 state["sensor_summary"] = {}
+                state["analysis"] = {"error": "no_data_available"}
                 return state
             
             # Análisis optimizado para cloud
@@ -459,37 +494,43 @@ class CloudIoTAgent:
                 "timestamp": datetime.now().isoformat()
             }
     
-    def _get_demo_data(self) -> List[Dict[str, Any]]:
+    def _check_jetson_api_status(self) -> Dict[str, Any]:
         """
-        Generar datos demo para cuando Jetson no está disponible.
+        Verificar el estado de la API de Jetson.
         
         Returns:
-            Lista de datos demo
+            Diccionario con el estado de la API
         """
-        import random
-        from datetime import timedelta
-        
-        demo_data = []
-        base_time = datetime.now()
-        
-        devices = ["arduino_eth_001", "esp32_wifi_001"]
-        sensors = ["t1", "t2", "avg", "ntc_entrada", "ntc_salida"]
-        
-        for i in range(30):
-            device = random.choice(devices)
-            sensor = random.choice(sensors)
-            value = round(random.uniform(20.0, 35.0), 2)
-            timestamp = base_time - timedelta(minutes=i)
+        try:
+            # Aquí iría la verificación real de la API de Jetson
+            # Por ejemplo: response = requests.get(f"{JETSON_API_URL}/health", timeout=5)
             
-            demo_data.append({
-                "device_id": device,
-                "sensor_type": sensor,
-                "value": value,
-                "timestamp": timestamp.isoformat(),
-                "unit": "°C" if sensor in sensors else ""
-            })
-        
-        return demo_data
+            return {
+                "status": "offline",
+                "error": "API_JETSON_OFFLINE",
+                "message": "La API de la Jetson no está disponible",
+                "instructions": [
+                    "🔧 Verificar que la Jetson esté encendida y conectada a la red",
+                    "📡 Confirmar que los servicios systemd estén ejecutándose:",
+                    "   sudo systemctl status iot-api-service",
+                    "   sudo systemctl status sensor-collector-service", 
+                    "🌐 Verificar conectividad de red desde la Jetson",
+                    "📋 Revisar logs del sistema: journalctl -u iot-api-service -f",
+                    "🔄 Reiniciar servicios si es necesario: sudo systemctl restart iot-api-service"
+                ]
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": "CONNECTION_ERROR", 
+                "message": f"Error al verificar API de Jetson: {str(e)}",
+                "instructions": [
+                    "🚨 Error de conexión con la Jetson",
+                    "🔌 Verificar cables de red y alimentación",
+                    "📡 Confirmar IP de la Jetson en la red local",
+                    "🔧 Revisar configuración de firewall en la Jetson"
+                ]
+            }
     
     def _format_data_for_model(self, data: List[Dict], analysis: Dict) -> str:
         """

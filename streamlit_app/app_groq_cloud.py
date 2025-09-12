@@ -283,7 +283,33 @@ def render_chat_interface():
         if message["role"] == "user":
             st.chat_message("user").write(message["content"])
         else:
-            st.chat_message("assistant").write(message["content"])
+            with st.chat_message("assistant"):
+                st.write(message["content"])
+                
+                # Si este mensaje tiene un reporte asociado, mostrar botón de descarga
+                if "conversation_id" in message:
+                    conv_id = message["conversation_id"]
+                    report_key = f'report_data_{conv_id}'
+                    
+                    if report_key in st.session_state:
+                        report_data = st.session_state[report_key]
+                        
+                        # Mostrar información del reporte disponible
+                        st.markdown("---")
+                        col_info, col_download = st.columns([3, 1])
+                        
+                        with col_info:
+                            st.info(f"📄 **Reporte disponible:** {report_data['filename']}")
+                        
+                        with col_download:
+                            st.download_button(
+                                label="⬇️ Descargar",
+                                data=report_data['bytes'],
+                                file_name=report_data['filename'],
+                                mime=report_data['mime_type'],
+                                key=f"historical_download_{conv_id}_{i}",
+                                use_container_width=True
+                            )
     
     # Input del usuario
     if prompt := st.chat_input("Pregunta sobre los sensores IoT..."):
@@ -291,11 +317,15 @@ def render_chat_interface():
             st.error("⚠️ Por favor inicializa el agente primero en la barra lateral")
             return
         
+        # Generar ID único para esta conversación
+        conversation_id = f"conv_{int(datetime.now().timestamp() * 1000)}"
+        
         # Agregar mensaje del usuario al historial
         st.session_state.conversation_history.append({
             "role": "user",
             "content": prompt,
-            "timestamp": datetime.now()
+            "timestamp": datetime.now(),
+            "conversation_id": conversation_id
         })
         
         # Mostrar mensaje del usuario
@@ -324,9 +354,13 @@ def render_chat_interface():
                     st.markdown("### 📊 Generar Reporte Descargable")
                     
                     # Detectar especificación del reporte
-                    report_spec = st.session_state.report_generator.parse_user_request_to_spec(
-                        prompt, response
-                    )
+                    try:
+                        report_spec = st.session_state.report_generator.parse_user_request_to_spec(
+                            prompt, response
+                        )
+                    except Exception as e:
+                        st.error(f"❌ Error parseando solicitud: {str(e)}")
+                        report_spec = None
                     
                     if report_spec:
                         col1, col2 = st.columns([2, 1])
@@ -339,14 +373,40 @@ def render_chat_interface():
                             st.write(f"📄 **Formato:** {report_spec.get('format', 'pdf').upper()}")
                         
                         with col2:
-                            if st.button("📥 Generar y Descargar", type="primary"):
-                                with st.spinner("Generando reporte..."):
-                                    try:
+                            if st.button("📥 Generar y Descargar", type="primary", key=f"generate_report_{conversation_id}"):
+                                try:
+                                    # Crear contenedor para mensajes de estado
+                                    status_container = st.container()
+                                    
+                                    with status_container:
+                                        # Mostrar mensaje inicial
+                                        st.info("🔧 Iniciando generación de reporte...")
+                                        
+                                        # Debug: verificar que tenemos los datos necesarios
+                                        st.write(f"🔍 Debug - Conversation ID: {conversation_id}")
+                                        st.write(f"� Debug - Response keys: {list(response.keys()) if response else 'None'}")
+                                        
+                                        # Debug: mostrar especificación
+                                        with st.expander("🔍 Debug - Especificación del reporte"):
+                                            st.json(report_spec)
+                                        
+                                        # Verificar que el generador de reportes esté disponible
+                                        if not hasattr(st.session_state, 'report_generator') or st.session_state.report_generator is None:
+                                            st.error("❌ Error: Generador de reportes no disponible")
+                                            st.stop()
+                                        
+                                        st.info("📊 Generando datos del reporte...")
+                                        
+                                        # Intentar generar el reporte
                                         file_bytes, filename = st.session_state.report_generator.generate_report(
                                             report_spec, response, response_text
                                         )
                                         
-                                        if file_bytes:
+                                        st.info("🔄 Procesando archivo...")
+                                        
+                                        if file_bytes and len(file_bytes) > 0:
+                                            st.info("📁 Preparando archivo para descarga...")
+                                            
                                             # Determinar MIME type
                                             mime_types = {
                                                 'pdf': 'application/pdf',
@@ -357,18 +417,55 @@ def render_chat_interface():
                                             }
                                             mime_type = mime_types.get(report_spec.get('format', 'pdf'), 'application/octet-stream')
                                             
-                                            st.download_button(
-                                                label=f"⬇️ Descargar {filename}",
-                                                data=file_bytes,
-                                                file_name=filename,
-                                                mime=mime_type,
-                                                use_container_width=True
-                                            )
-                                            st.success("✅ ¡Reporte generado exitosamente!")
+                                            # Guardar en session state para persistencia usando conversation_id
+                                            st.session_state[f'report_data_{conversation_id}'] = {
+                                                'bytes': file_bytes,
+                                                'filename': filename,
+                                                'mime_type': mime_type
+                                            }
+                                            
+                                            st.success(f"✅ ¡Reporte generado exitosamente! - {filename} ({len(file_bytes):,} bytes)")
+                                            
+                                            # NO usar st.rerun() aquí, simplemente mostrar el botón directamente
+                                            
                                         else:
-                                            st.error("❌ Error generando el reporte")
-                                    except Exception as e:
-                                        st.error(f"❌ Error: {str(e)}")
+                                            st.error("❌ Error: El archivo generado está vacío")
+                                            st.error(f"🔍 Debug: file_bytes length = {len(file_bytes) if file_bytes else 'None'}")
+                                            
+                                except Exception as e:
+                                    st.error(f"❌ Error generando reporte: {str(e)}")
+                                    st.error(f"🔍 Debug: {type(e).__name__}")
+                                    import traceback
+                                    st.error("🔍 Traceback completo:")
+                                    st.code(traceback.format_exc())
+                        
+                        # Mostrar botón de descarga si existe el reporte en session state
+                        report_key = f'report_data_{conversation_id}'
+                        if report_key in st.session_state:
+                            report_data = st.session_state[report_key]
+                            
+                            # Crear columna destacada para la descarga
+                            st.markdown("---")
+                            st.markdown("### 📥 **Descarga Disponible**")
+                            
+                            col_info, col_download = st.columns([2, 1])
+                            
+                            with col_info:
+                                st.success("✅ **Reporte listo para descarga**")
+                                st.write(f"📄 **Archivo:** {report_data['filename']}")
+                                st.write(f"📊 **Tamaño:** {len(report_data['bytes']):,} bytes")
+                                st.write(f"🗂️ **Tipo:** {report_data['mime_type']}")
+                            
+                            with col_download:
+                                st.download_button(
+                                    label="⬇️ **DESCARGAR**",
+                                    data=report_data['bytes'],
+                                    file_name=report_data['filename'],
+                                    mime=report_data['mime_type'],
+                                    use_container_width=True,
+                                    key=f"download_{conversation_id}",
+                                    type="primary"
+                                )
                     else:
                         st.warning("⚠️ No se pudo interpretar la solicitud de reporte. Intenta ser más específico.")
                 
@@ -405,7 +502,8 @@ def render_chat_interface():
                     "role": "assistant",
                     "content": response_text,
                     "timestamp": datetime.now(),
-                    "details": response
+                    "details": response,
+                    "conversation_id": conversation_id
                 })
             else:
                 error_msg = f"❌ Error: {response.get('error', 'Error desconocido')}"
@@ -415,7 +513,8 @@ def render_chat_interface():
                 st.session_state.conversation_history.append({
                     "role": "assistant",
                     "content": error_msg,
-                    "timestamp": datetime.now()
+                    "timestamp": datetime.now(),
+                    "conversation_id": conversation_id
                 })
 
 def render_examples():
