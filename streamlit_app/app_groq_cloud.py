@@ -32,7 +32,7 @@ if project_root not in sys.path:
 
 # Importaciones del proyecto
 try:
-    from modules.agents.groq_integration import GroqIntegration
+    from modules.agents.cloud_iot_agent import CloudIoTAgent
     from modules.tools.jetson_api_connector import JetsonAPIConnector
     from modules.agents.reporting import ReportGenerator
     
@@ -47,36 +47,35 @@ except ImportError as e:
 # Función para inicializar servicios
 @st.cache_resource
 def initialize_services():
-    """Inicializar servicios globales"""
+    """Inicializar servicios globales con conexiones correctas"""
     try:
-        groq_agent = GroqIntegration()
+        # Crear conector de Jetson
         jetson_connector = JetsonAPIConnector(JETSON_API_URL)
-        report_generator = ReportGenerator()
         
-        return groq_agent, jetson_connector, report_generator
+        # Crear agente completo (no solo Groq)
+        cloud_agent = CloudIoTAgent()
+        
+        # Crear generador de reportes CON conexión a Jetson
+        report_generator = ReportGenerator(jetson_connector=jetson_connector)
+        
+        return cloud_agent, jetson_connector, report_generator
     except Exception as e:
         st.error(f"❌ Error inicializando servicios: {str(e)}")
         return None, None, None
 
 # Función de procesamiento de consultas (compartida)
-def process_user_query(query: str):
-    """Procesar consulta del usuario"""
+async def process_user_query(query: str):
+    """Procesar consulta del usuario usando CloudIoTAgent completo"""
     try:
-        groq_agent, jetson_connector, _ = initialize_services()
+        cloud_agent, jetson_connector, _ = initialize_services()
         
-        if not groq_agent:
-            return {"success": False, "error": "Agente no disponible"}
+        if not cloud_agent:
+            return {"success": False, "error": "Agente IoT no disponible"}
         
-        # Procesar con Groq usando el método correcto
-        response_text = groq_agent.generate_response(query)
+        # Usar CloudIoTAgent completo (NO solo Groq)
+        response = await cloud_agent.process_query(query)
         
-        return {
-            "success": True,
-            "response": response_text,
-            "data_summary": {"total_records": 150, "sensors": ["temperature", "ldr"], "devices": ["esp32_wifi_001", "arduino_eth_001"]},
-            "model_used": "llama-3.1-8b-instant",
-            "execution_status": "completed"
-        }
+        return response
         
     except Exception as e:
         return {
@@ -140,7 +139,12 @@ def render_chat_tab():
         # Procesar consulta
         with st.chat_message("assistant"):
             with st.spinner("🤖 Analizando sensores..."):
-                response = process_user_query(prompt)
+                import asyncio
+                try:
+                    # Ejecutar función async en Streamlit
+                    response = asyncio.run(process_user_query(prompt))
+                except Exception as e:
+                    response = {"success": False, "error": str(e)}
             
             if response.get("success", False):
                 response_text = response.get("response", "No se pudo generar respuesta")
@@ -190,12 +194,24 @@ def render_reports_tab():
         
         with col1:
             st.markdown("**📱 Dispositivos**")
-            device_esp32 = st.checkbox("ESP32 WiFi 001", value=True)
-            device_arduino = st.checkbox("Arduino Ethernet 001", value=True)
+            device_esp32 = st.checkbox("ESP32 WiFi 001 (192.168.0.105)", value=True, 
+                                       help="Sensores: ntc_entrada, ntc_salida, ldr")
+            device_arduino = st.checkbox("Arduino Ethernet 001 (192.168.0.106)", value=True,
+                                         help="Sensores: t1, t2, avg (SOLO temperatura)")
             
             st.markdown("**🔬 Sensores**")
-            sensor_temperature = st.checkbox("Temperatura", value=True)
-            sensor_ldr = st.checkbox("LDR (Luz)", value=True)
+            sensor_temperature = st.checkbox("Temperatura", value=True, 
+                                             help="Disponible en ambos dispositivos")
+            
+            # Solo mostrar LDR si ESP32 está seleccionado
+            if device_esp32:
+                sensor_ldr = st.checkbox("LDR (Luz)", value=True, 
+                                         help="SOLO disponible en ESP32 WiFi")
+            else:
+                sensor_ldr = False
+                st.info("ℹ️ LDR solo disponible con ESP32 WiFi")
+                if device_arduino and not device_esp32:
+                    st.info("ℹ️ Arduino Ethernet SOLO tiene sensores de temperatura (t1, t2, avg)")
         
         with col2:
             st.markdown("**📈 Tipos de Gráficos**")
@@ -261,34 +277,138 @@ def render_reports_tab():
             }
         }
         
-        # Metadata simulada (en producción vendría del chat/consulta)
-        metadata = {
-            "data_summary": {
-                "total_records": 250,
-                "sensors": selected_sensors,
-                "devices": selected_devices
-            },
-            "model_used": "llama-3.1-8b-instant",
-            "execution_status": "completed"
-        }
-        
-        # Summary text
-        summary_text = f"""
-        ANÁLISIS EJECUTIVO DE SENSORES IOT - {time_range.upper()}
-        
-        Dispositivos monitoreados: {', '.join(selected_devices)}
-        Sensores analizados: {', '.join(selected_sensors)}
-        
-        Durante el período de {time_range} se monitorearon los dispositivos seleccionados:
-        
-        """ + ("ESP32 WiFi 001: Estado operativo, datos normales\n" if device_esp32 else "") + \
-              ("Arduino Ethernet 001: Funcionamiento estable\n" if device_arduino else "") + \
-        """
-        RECOMENDACIONES:
-        • Continuar monitoreo automático
-        • Revisar tendencias identificadas
-        • Mantener calibración de sensores
-        """
+        # Obtener datos reales del Jetson API
+        try:
+            status_text = st.empty()
+            status_text.text("🔍 Obteniendo datos reales de sensores...")
+            
+            # Obtener datos reales usando el conector (función síncrona)
+            real_data_result = jetson_connector.get_sensor_data(limit=100)
+            
+            if real_data_result and len(real_data_result) > 0:
+                sensor_data = real_data_result
+                
+                # Filtrar datos según dispositivos seleccionados
+                filtered_data = []
+                for record in sensor_data:
+                    if record.get("device_id") in selected_devices:
+                        filtered_data.append(record)
+                
+                # Crear metadata con datos reales
+                metadata = {
+                    "data_summary": {
+                        "total_records": len(filtered_data),
+                        "sensors": selected_sensors,
+                        "devices": selected_devices,
+                        "real_data": True,
+                        "latest_readings": {}
+                    },
+                    "model_used": "llama-3.1-8b-instant",
+                    "execution_status": "completed"
+                }
+                
+                # Obtener últimas lecturas por dispositivo
+                device_latest = {}
+                for record in filtered_data:
+                    device_id = record.get("device_id")
+                    if device_id not in device_latest:
+                        device_latest[device_id] = record
+                    elif record.get("timestamp", "") > device_latest[device_id].get("timestamp", ""):
+                        device_latest[device_id] = record
+                
+                # Construir summary con datos reales
+                summary_parts = [
+                    f"ANÁLISIS EJECUTIVO DE SENSORES IOT - {time_range.upper()}",
+                    "",
+                    f"Dispositivos monitoreados: {', '.join(selected_devices)}",
+                    f"Sensores analizados: {', '.join(selected_sensors)}",
+                    f"Total de registros procesados: {len(filtered_data)}",
+                    "",
+                    f"Durante el período de {time_range} se monitorearon los dispositivos seleccionados:",
+                    ""
+                ]
+                
+                # Agregar información específica por dispositivo
+                for device_id, latest in device_latest.items():
+                    if device_id == "esp32_wifi_001" and device_esp32:
+                        summary_parts.append(f"ESP32 WiFi 001 (192.168.0.105): {len([r for r in filtered_data if r.get('device_id') == device_id])} registros")
+                        if latest:
+                            summary_parts.append(f"  • Última lectura: {latest.get('timestamp', 'N/A')}")
+                            if 'ntc_entrada' in latest:
+                                summary_parts.append(f"  • NTC entrada: {latest['ntc_entrada']}°C")
+                            if 'ntc_salida' in latest:
+                                summary_parts.append(f"  • NTC salida: {latest['ntc_salida']}°C")
+                            if 'ldr' in latest:
+                                summary_parts.append(f"  • LDR: {latest['ldr']}")
+                    
+                    elif device_id == "arduino_eth_001" and device_arduino:
+                        summary_parts.append(f"Arduino Ethernet 001 (192.168.0.106): {len([r for r in filtered_data if r.get('device_id') == device_id])} registros")
+                        if latest:
+                            summary_parts.append(f"  • Última lectura: {latest.get('timestamp', 'N/A')}")
+                            if 't1' in latest:
+                                summary_parts.append(f"  • Temperatura T1: {latest['t1']}°C")
+                            if 't2' in latest:
+                                summary_parts.append(f"  • Temperatura T2: {latest['t2']}°C")
+                            if 'avg' in latest:
+                                summary_parts.append(f"  • Promedio: {latest['avg']}°C")
+                
+                summary_parts.extend([
+                    "",
+                    "RECOMENDACIONES:",
+                    "• Continuar monitoreo automático",
+                    "• Revisar tendencias identificadas",
+                    "• Mantener calibración de sensores"
+                ])
+                
+                summary_text = "\n".join(summary_parts)
+                
+            else:
+                # Fallback a datos simulados si no hay datos reales
+                st.warning("⚠️ No se pudieron obtener datos reales, usando configuración básica")
+                metadata = {
+                    "data_summary": {
+                        "total_records": 0,
+                        "sensors": selected_sensors,
+                        "devices": selected_devices,
+                        "real_data": False
+                    },
+                    "model_used": "llama-3.1-8b-instant",
+                    "execution_status": "no_data"
+                }
+                
+                summary_text = f"""
+                ANÁLISIS EJECUTIVO DE SENSORES IOT - {time_range.upper()}
+                
+                Dispositivos configurados: {', '.join(selected_devices)}
+                Sensores configurados: {', '.join(selected_sensors)}
+                
+                ⚠️ No se encontraron datos en el período especificado.
+                
+                CONFIGURACIÓN DE DISPOSITIVOS:
+                """ + ("• ESP32 WiFi 001 (192.168.0.105): ntc_entrada, ntc_salida, ldr\n" if device_esp32 else "") + \
+                      ("• Arduino Ethernet 001 (192.168.0.106): t1, t2, avg (SOLO temperatura)\n" if device_arduino 
+                       else "") + """
+                
+                RECOMENDACIONES:
+                • Verificar conectividad de dispositivos
+                • Revisar configuración de red
+                • Confirmar funcionamiento de sensores
+                """
+                
+        except Exception as e:
+            st.error(f"❌ Error obteniendo datos reales: {str(e)}")
+            # Fallback a configuración básica
+            metadata = {
+                "data_summary": {
+                    "total_records": 0,
+                    "sensors": selected_sensors,
+                    "devices": selected_devices,
+                    "real_data": False,
+                    "error": str(e)
+                },
+                "model_used": "llama-3.1-8b-instant",
+                "execution_status": "error"
+            }
         
         # Mostrar progreso
         with st.container():

@@ -364,17 +364,36 @@ La API de la Jetson no está respondiendo. Por favor:
             user_query = state["user_query"]
             formatted_data = state.get("formatted_data", "")
             
-            # Crear prompt para Groq
+            # Crear prompt específico para Groq con configuración real
             prompt = f"""
             Eres un asistente experto en análisis de datos de sensores IoT.
             
+            CONFIGURACIÓN REAL DE DISPOSITIVOS (IMPORTANTE - NO DESVIAR):
+            
+            🔧 ARDUINO ETHERNET (arduino_eth_001):
+            - IP: 192.168.0.106
+            - SENSORES: SOLO t1, t2, avg (temperaturas únicamente)
+            - NO TIENE: LDR, sensor de luz, luminosidad
+            
+            📡 ESP32 WIFI (esp32_wifi_001):
+            - IP: 192.168.0.105  
+            - SENSORES: ntc_entrada, ntc_salida (temperaturas) + ldr (luz)
+            - TIENE: Sensores de temperatura Y sensor LDR
+            
             CONSULTA DEL USUARIO: {user_query}
             
-            DATOS DE SENSORES DISPONIBLES:
+            DATOS REALES DE SENSORES:
             {formatted_data}
             
-            Proporciona un análisis claro y profesional basado ÚNICAMENTE en los datos mostrados.
-            NO inventes datos que no están presentes.
+            INSTRUCCIONES CRÍTICAS:
+            1. Analiza ÚNICAMENTE los datos mostrados arriba
+            2. NUNCA menciones LDR para Arduino Ethernet
+            3. Solo ESP32 WiFi tiene sensor LDR
+            4. NO inventes datos que no están presentes
+            5. Sé específico sobre qué dispositivo tiene qué sensores
+            6. Si se pregunta por LDR del Arduino, aclara que NO lo tiene
+            
+            Proporciona un análisis claro y preciso basado en esta configuración real.
             """
             
             # Generar respuesta con Groq
@@ -534,25 +553,49 @@ La API de la Jetson no está respondiendo. Por favor:
     
     def _format_data_for_model(self, data: List[Dict], analysis: Dict) -> str:
         """
-        Formatear datos para el modelo HuggingFace.
+        Formatear datos para el modelo con configuración específica de dispositivos.
         
         Args:
             data: Datos de sensores
             analysis: Análisis de datos
             
         Returns:
-            Datos formateados como string
+            Datos formateados como string con configuración detallada
         """
-        formatted = f"=== DATOS DE SENSORES IoT ===\n"
-        formatted += f"Total de registros: {analysis['total_records']}\n"
-        formatted += f"Dispositivos: {', '.join(analysis['devices'])}\n"
-        formatted += f"Sensores: {', '.join(analysis['sensors'])}\n\n"
+        formatted = f"=== CONFIGURACIÓN REAL DE DISPOSITIVOS ===\n"
         
-        # Últimas lecturas por sensor
-        formatted += "ÚLTIMAS LECTURAS:\n"
-        for sensor, reading in analysis.get("latest_readings", {}).items():
-            unit = "°C" if sensor in ['t1', 't2', 'avg', 'ntc_entrada', 'ntc_salida'] else ""
-            formatted += f"• {sensor}: {reading['value']}{unit} ({reading['device']})\n"
+        # Configuración específica para evitar alucinaciones
+        formatted += "🔧 ARDUINO ETHERNET (arduino_eth_001):\n"
+        formatted += "   - IP: 192.168.0.106\n"
+        formatted += "   - SENSORES: SOLO t1, t2, avg (temperaturas únicamente)\n"
+        formatted += "   - NO TIENE: LDR, sensor de luz, luminosidad\n\n"
+        
+        formatted += "📡 ESP32 WIFI (esp32_wifi_001):\n"
+        formatted += "   - IP: 192.168.0.105\n"
+        formatted += "   - SENSORES: ntc_entrada, ntc_salida (temperaturas) + ldr (luz)\n\n"
+        
+        formatted += f"=== DATOS ACTUALES ===\n"
+        formatted += f"Total de registros: {analysis['total_records']}\n"
+        formatted += f"Dispositivos activos: {', '.join(analysis['devices'])}\n"
+        formatted += f"Sensores disponibles: {', '.join(analysis['sensors'])}\n\n"
+        
+        # Últimas lecturas organizadas por dispositivo
+        formatted += "ÚLTIMAS LECTURAS POR DISPOSITIVO:\n"
+        latest_readings = analysis.get("latest_readings", {})
+        
+        # Agrupar por dispositivo
+        by_device = {}
+        for sensor, reading in latest_readings.items():
+            device = reading['device']
+            if device not in by_device:
+                by_device[device] = []
+            by_device[device].append((sensor, reading))
+        
+        for device, sensors in by_device.items():
+            formatted += f"\n{device}:\n"
+            for sensor, reading in sensors:
+                unit = "°C" if sensor in ['t1', 't2', 'avg', 'ntc_entrada', 'ntc_salida'] else ""
+                formatted += f"   • {sensor}: {reading['value']}{unit}\n"
         
         return formatted
     
