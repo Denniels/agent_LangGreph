@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class JetsonAPIConnector:
     """Conector para la API del Jetson remoto via Cloudflare tunnel"""
     
-    def __init__(self, base_url: str = "https://dpi-opportunity-hybrid-manufacturer.trycloudflare.com"):
+    def __init__(self, base_url: str = "https://personnel-newsletters-jade-insertion.trycloudflare.com"):
         """
         Inicializar el conector
         
