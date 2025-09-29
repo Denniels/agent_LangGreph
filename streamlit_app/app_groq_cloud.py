@@ -44,7 +44,7 @@ try:
     
     # Variables de configuración
     GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-    JETSON_API_URL = "https://personnel-newsletters-jade-insertion.trycloudflare.com"
+    JETSON_API_URL = "https://northwest-institution-oxygen-latin.trycloudflare.com"
     
 except ImportError as e:
     st.error(f"❌ Error importando módulos: {str(e)}")
