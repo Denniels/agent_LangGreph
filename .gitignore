@@ -84,3 +84,23 @@ htmlcov/
 .coverage.*
 coverage.xml
 *.cover
+
+# Archivos de test temporales en raíz (deben ir en tests/)
+/test_*.py
+
+# Archivos de datos temporales
+usage_data.json.bak
+*.json.bak
+
+# Archivos de reportes temporales
+test_reporte_*.pdf
+reporte_*.pdf
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# IDEs y editores adicionales
+*.sublime-project
+*.sublime-workspace
+.vscode/settings.json
+.vscode/launch.json
