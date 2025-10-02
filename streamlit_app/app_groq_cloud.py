@@ -46,6 +46,17 @@ try:
     GROQ_API_KEY = os.getenv('GROQ_API_KEY')
     JETSON_API_URL = "https://couples-mario-repository-alive.trycloudflare.com"
     
+    # 🔧 VERIFICACIÓN DE VERSIÓN PARA DEBUGGING
+    import inspect
+    connector_source = inspect.getsource(JetsonAPIConnector.get_devices)
+    CODIGO_CORREGIDO = "isinstance(response, list)" in connector_source
+    
+    # 🚨 FORZAR LIMPIEZA DE CACHE SI HAY PROBLEMAS
+    if not CODIGO_CORREGIDO:
+        st.cache_resource.clear()
+        st.error("🚨 Código no actualizado - limpiando cache...")
+        st.rerun()
+    
 except ImportError as e:
     st.error(f"❌ Error importando módulos: {str(e)}")
     st.stop()
@@ -55,8 +66,19 @@ except ImportError as e:
 def initialize_services():
     """Inicializar servicios globales con conexiones correctas"""
     try:
-        # Crear conector de Jetson
+        # 🔧 FORZAR VERSIÓN ACTUALIZADA
+        st.write("🔄 Inicializando servicios con versión actualizada...")
+        
+        # Crear conector de Jetson con verificación
         jetson_connector = JetsonAPIConnector(JETSON_API_URL)
+        
+        # Verificar que el conector funciona
+        try:
+            devices = jetson_connector.get_devices()
+            st.write(f"✅ Jetson API: {len(devices)} dispositivos detectados")
+        except Exception as e:
+            st.error(f"❌ Error Jetson API: {e}")
+            return None, None, None
         
         # Crear agente completo (no solo Groq)
         cloud_agent = CloudIoTAgent()
@@ -677,6 +699,20 @@ def render_sidebar():
         st.info(f"**API URL:** {JETSON_API_URL}")
         st.info(f"**Modelo:** llama-3.1-8b-instant")
         st.info(f"**Versión:** Pestañas Separadas v1.0")
+        
+        # 🔧 INFORMACIÓN DE DEBUG
+        st.subheader("🔧 Debug Info")
+        st.info(f"**Código corregido:** {'✅ Sí' if CODIGO_CORREGIDO else '❌ No'}")
+        
+        if st.button("🧪 Test Conectividad"):
+            try:
+                test_connector = JetsonAPIConnector(JETSON_API_URL)
+                devices = test_connector.get_devices()
+                st.success(f"✅ API funcional: {len(devices)} dispositivos")
+                for device in devices:
+                    st.write(f"- {device['device_id']}: {device['status']}")
+            except Exception as e:
+                st.error(f"❌ Error API: {e}")
         
         st.markdown("---")
         
