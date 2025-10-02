@@ -1,6 +1,12 @@
 """
-JetsonAPIConnector - Adaptador para conectar el agente a la API de Jetson
-Reemplaza la conexión local de base de datos por conexión remota
+JetsonAPIConnector - Adaptador ROBUSTO para conectar el agente a la API de Jetson
+
+VERSIÓN 2.0 - ROBUSTA Y AUTORECUPERABLE:
+- Reconexión automática tras cortes de energía  
+- Detección automática de URLs cambiantes
+- Manejo robusto de errores de red
+- Cache inteligente de configuración
+- Compatible 100% con código existente
 """
 
 import requests
@@ -9,36 +15,92 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 import logging
 
+# Importar manager robusto
+try:
+    print("🔍 Intentando importar jetson_api_manager...")
+    
+    # Agregar path para imports cuando se ejecuta directamente
+    import sys
+    import os
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(os.path.dirname(current_dir))
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+    
+    from modules.utils.jetson_api_manager import get_jetson_manager
+    print("✅ Import del jetson_api_manager exitoso")
+    ROBUST_MODE = True
+    
+except Exception as e:
+    print(f"❌ Error en import: {e}")
+    ROBUST_MODE = False
+    
+# Configurar logger
+logger = logging.getLogger(__name__)
+
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class JetsonAPIConnector:
-    """Conector para la API del Jetson remoto via Cloudflare tunnel"""
+    """
+    Conector ROBUSTO para la API del Jetson remoto via Cloudflare tunnel
+    
+    VERSIÓN 2.0 - CARACTERÍSTICAS ROBUSTAS:
+    ✅ Reconexión automática tras cortes de energía
+    ✅ Detección automática de URLs cambiantes  
+    ✅ Reintentos inteligentes con backoff
+    ✅ Cache de configuración persistente
+    ✅ 100% compatible con código existente
+    """
     
     def __init__(self, base_url: str = "https://couples-mario-repository-alive.trycloudflare.com"):
         """
-        Inicializar el conector
+        Inicializar el conector ROBUSTO con autorecuperación
         
         Args:
             base_url: URL base de la API del Jetson
         """
-        self.base_url = base_url.rstrip('/')
+        # ⚡ MODO ROBUSTO - AUTORECUPERABLE ⚡
+        if ROBUST_MODE:
+            logger.info("🚀 Iniciando JetsonAPIConnector ROBUSTO v2.0")
+            self.manager = get_jetson_manager()
+            
+            # Agregar URL como candidata (si no está ya)
+            if base_url not in self.manager.candidate_urls:
+                self.manager.candidate_urls.insert(0, base_url)
+            
+            # Descubrir URL que funciona
+            working_url = self.manager.discover_working_url()
+            if working_url:
+                self.base_url = working_url.rstrip('/')
+                logger.info(f"✅ URL operativa detectada: {working_url}")
+            else:
+                logger.warning("⚠️ Usando URL proporcionada - sin verificación")
+                self.base_url = base_url.rstrip('/')
+        else:
+            # Modo legacy
+            logger.warning("⚠️ Modo legacy - funcionalidad reducida")
+            self.manager = None
+            self.base_url = base_url.rstrip('/')
+        
+        # Configurar sesión HTTP
         self.session = requests.Session()
         self.session.timeout = 10
         
         # Headers por defecto
         self.session.headers.update({
-            'User-Agent': 'LangGraph-Agent/1.0',
+            'User-Agent': 'LangGraph-Agent-v2.0/Robust',
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         })
         
-        logger.info(f"JetsonAPIConnector initialized for {self.base_url}")
+        logger.info(f"🔗 JetsonAPIConnector iniciado en: {self.base_url}")
+        logger.info(f"⚙️ Modo robusto: {'✅ ACTIVO' if ROBUST_MODE else '❌ INACTIVO'}")
     
     def _make_request(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Hacer una petición a la API
+        Hacer una petición ROBUSTA a la API con autorecuperación
         
         Args:
             endpoint: Endpoint de la API (ej: '/data', '/devices')
@@ -48,34 +110,101 @@ class JetsonAPIConnector:
             Dict con la respuesta de la API
             
         Raises:
-            Exception: Si hay error en la petición
+            Exception: Si hay error en la petición tras reintentos
         """
+        # ⚡ MODO ROBUSTO CON AUTORECUPERACIÓN ⚡
+        if ROBUST_MODE and self.manager:
+            logger.info(f"🚀 Petición robusta a {endpoint}")
+            try:
+                # Usar el manager robusto que maneja reintentos y reconexión
+                response_data = self.manager.make_robust_request(endpoint, params)
+                
+                if response_data is not None:
+                    logger.info(f"✅ Petición robusta exitosa: {endpoint}")
+                    return response_data
+                else:
+                    # Si el manager robusto devuelve None, lanzar excepción
+                    logger.error(f"💥 Petición robusta devolvió None: {endpoint}")
+                    raise Exception(f"Robust request returned None for {endpoint}")
+                    
+            except Exception as e:
+                logger.error(f"💥 Petición robusta falló tras reintentos: {e}")
+                raise Exception(f"API request failed after robust retries: {e}")
+        
+        # Modo legacy (sin robustez)
         url = f"{self.base_url}{endpoint}"
         
         try:
-            logger.info(f"Making request to {url} with params {params}")
+            logger.info(f"📡 Petición legacy a {url} con params {params}")
             response = self.session.get(url, params=params)
             response.raise_for_status()
             
             data = response.json()
-            logger.info(f"Request successful: {response.status_code}")
+            logger.info(f"✅ Petición legacy exitosa: {response.status_code}")
             return data
             
         except requests.exceptions.RequestException as e:
-            logger.error(f"Request failed: {e}")
+            logger.error(f"❌ Petición legacy falló: {e}")
             raise Exception(f"API request failed: {e}")
         except json.JSONDecodeError as e:
-            logger.error(f"JSON decode failed: {e}")
+            logger.error(f"❌ JSON decode failed: {e}")
             raise Exception(f"Invalid JSON response: {e}")
     
     def get_health_status(self) -> Dict[str, Any]:
         """
-        Obtener estado de salud del sistema
+        Obtener estado de salud del sistema con verificación robusta
         
         Returns:
             Dict con el estado de salud
         """
         return self._make_request('/health')
+    
+    def test_robust_connectivity(self) -> Dict[str, Any]:
+        """
+        Probar conectividad robusta con autorecuperación
+        
+        Returns:
+            Dict con resultados de conectividad
+        """
+        result = {
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'robust_mode': ROBUST_MODE,
+            'base_url': self.base_url,
+            'connectivity': 'unknown',
+            'details': {}
+        }
+        
+        if ROBUST_MODE and self.manager:
+            try:
+                # Probar conectividad usando manager robusto
+                connectivity_result = self.manager.test_url_connectivity(self.base_url)
+                result['connectivity'] = 'success' if connectivity_result['success'] else 'failed'
+                result['details'] = connectivity_result
+                
+                # Si falló, intentar redescubrir
+                if not connectivity_result['success']:
+                    logger.warning("🔄 Reconectividad falló - intentando redescubrir...")
+                    new_url = self.manager.discover_working_url()
+                    if new_url and new_url != self.base_url:
+                        self.base_url = new_url
+                        result['base_url'] = new_url
+                        result['details']['rediscovered_url'] = new_url
+                        logger.info(f"🆕 Nueva URL detectada: {new_url}")
+                
+            except Exception as e:
+                result['connectivity'] = 'error'
+                result['details']['error'] = str(e)
+        else:
+            # Test básico en modo legacy
+            try:
+                health = self.get_health_status()
+                result['connectivity'] = 'success' if health else 'failed'
+                result['details'] = {'health_check': health}
+            except Exception as e:
+                result['connectivity'] = 'error'
+                result['details']['error'] = str(e)
+        
+        return result
     
     def get_system_status(self) -> Dict[str, Any]:
         """
@@ -202,23 +331,26 @@ class JetsonAPIConnector:
         
         return organized_data
     
-    def get_temperature_data(self) -> List[Dict[str, Any]]:
+    def get_temperature_data(self, limit: int = 200) -> List[Dict[str, Any]]:
         """
         Obtener datos específicos de temperatura de todos los dispositivos
+        
+        Args:
+            limit: Número máximo de registros por dispositivo (default: 200 para cubrir últimos 10 min)
         
         Returns:
             Lista de registros de temperatura
         """
         all_data = []
         
-        # Obtener datos de Arduino (sensores: t1, t2, avg)
-        arduino_data = self.get_sensor_data(device_id='arduino_eth_001', limit=20)
-        temp_sensors = ['t1', 't2', 'avg']
+        # Obtener datos de Arduino (sensores: temperature_1, temperature_2, temperature_avg)
+        arduino_data = self.get_sensor_data(device_id='arduino_eth_001', limit=limit)
+        temp_sensors = ['temperature_1', 'temperature_2', 'temperature_avg']
         arduino_temp = [record for record in arduino_data if record.get('sensor_type') in temp_sensors]
         all_data.extend(arduino_temp)
         
         # Obtener datos de ESP32 (sensores: ntc_entrada, ntc_salida) 
-        esp32_data = self.get_sensor_data(device_id='esp32_wifi_001', limit=20)
+        esp32_data = self.get_sensor_data(device_id='esp32_wifi_001', limit=limit)
         ntc_sensors = ['ntc_entrada', 'ntc_salida']
         esp32_temp = [record for record in esp32_data if record.get('sensor_type') in ntc_sensors]
         all_data.extend(esp32_temp)
@@ -298,7 +430,7 @@ class JetsonAPIConnector:
                 timestamp = latest.get('timestamp', '')
                 
                 # Determinar unidad apropiada
-                if sensor_type in ['t1', 't2', 'avg', 'ntc_entrada', 'ntc_salida']:
+                if sensor_type in ['temperature_1', 'temperature_2', 'temperature_avg', 'ntc_entrada', 'ntc_salida']:
                     unit = '°C'
                 elif sensor_type == 'ldr':
                     unit = ' (sensor luz)'
@@ -386,14 +518,26 @@ class JetsonAPITester:
 
 
 if __name__ == "__main__":
-    # Prueba básica del conector
-    print("🧪 PRUEBA DEL JETSON API CONNECTOR")
-    print("=" * 50)
+    # Prueba ROBUSTA del conector
+    print("🧪 PRUEBA DEL JETSON API CONNECTOR v2.0 ROBUSTO")
+    print("=" * 60)
     
     connector = create_jetson_connector()
     tester = JetsonAPITester(connector)
     
-    # Ejecutar pruebas
+    # Test de conectividad robusta
+    print("🚀 INICIANDO TESTS DE ROBUSTEZ...")
+    robust_test = connector.test_robust_connectivity()
+    
+    print(f"⚙️ Modo robusto: {'✅ ACTIVO' if robust_test['robust_mode'] else '❌ INACTIVO'}")
+    print(f"🔗 URL actual: {robust_test['base_url']}")
+    print(f"📡 Conectividad: {robust_test['connectivity']}")
+    
+    if 'rediscovered_url' in robust_test['details']:
+        print(f"🆕 URL redescubierta: {robust_test['details']['rediscovered_url']}")
+    
+    # Ejecutar pruebas estándar
+    print("\n🔬 EJECUTANDO TESTS ESTÁNDAR...")
     results = tester.run_connectivity_test()
     
     print(f"📊 Estado general: {results['overall_status']}")
@@ -410,9 +554,9 @@ if __name__ == "__main__":
             print(f"   🔥 Error: {test_data['error']}")
     
     # Mostrar datos formateados para LLM
-    print("\n" + "=" * 50)
+    print("\n" + "=" * 60)
     print("📝 DATOS FORMATEADOS PARA LLM:")
-    print("=" * 50)
+    print("=" * 60)
     
     try:
         sensor_data = connector.get_sensor_data(limit=10)
@@ -420,3 +564,22 @@ if __name__ == "__main__":
         print(formatted)
     except Exception as e:
         print(f"❌ Error formateando datos: {e}")
+        
+    # Resumen de robustez
+    print("\n" + "=" * 60)
+    print("🛡️ RESUMEN DE ROBUSTEZ:")
+    print("=" * 60)
+    print(f"✅ Reconexión automática: {'SÍ' if robust_test['robust_mode'] else 'NO'}")
+    print(f"✅ Detección de URL: {'SÍ' if robust_test['robust_mode'] else 'NO'}")
+    print(f"✅ Reintentos inteligentes: {'SÍ' if robust_test['robust_mode'] else 'NO'}")
+    print(f"✅ Cache de configuración: {'SÍ' if robust_test['robust_mode'] else 'NO'}")
+    print(f"✅ Autorecuperación: {'SÍ' if robust_test['robust_mode'] else 'NO'}")
+    
+    if robust_test['robust_mode']:
+        print("\n🚀 SISTEMA COMPLETAMENTE ROBUSTO - Resistente a:")
+        print("   💡 Cortes de energía")
+        print("   🔄 Cambios de URL de Cloudflare")  
+        print("   🌐 Interrupciones de red")
+        print("   ⚡ Reconexión automática")
+    else:
+        print("\n⚠️ MODO LEGACY - Funcionalidad básica sin robustez")
