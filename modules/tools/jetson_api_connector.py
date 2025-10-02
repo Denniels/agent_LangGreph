@@ -94,8 +94,20 @@ class JetsonAPIConnector:
             Lista de dispositivos
         """
         response = self._make_request('/devices')
-        if response.get('success') and 'data' in response:
+        
+        # Manejar ambos formatos de respuesta:
+        # 1. Formato encapsulado: {"success": true, "data": [...]}
+        # 2. Formato directo: [...]
+        if isinstance(response, list):
+            # Respuesta directa (formato actual de la API)
+            return response
+        elif response.get('success') and 'data' in response:
+            # Respuesta encapsulada
             return response['data']
+        elif isinstance(response, dict) and 'devices' in response:
+            # Otro formato posible
+            return response['devices']
+        
         return []
     
     def get_device_info(self, device_id: str) -> Dict[str, Any]:
@@ -137,15 +149,25 @@ class JetsonAPIConnector:
             
         response = self._make_request(endpoint, params)
         
-        if response.get('success') and 'data' in response:
+        # Manejar ambos formatos de respuesta:
+        # 1. Formato encapsulado: {"success": true, "data": [...]}
+        # 2. Formato directo: [...]
+        data = []
+        if isinstance(response, list):
+            # Respuesta directa (formato actual de la API)
+            data = response
+        elif response.get('success') and 'data' in response:
+            # Respuesta encapsulada
             data = response['data']
-            
-            # Filtrar por tipo de sensor si se especifica
-            if sensor_type:
-                data = [record for record in data if record.get('sensor_type') == sensor_type]
-            
-            return data
-        return []
+        elif isinstance(response, dict) and 'sensors' in response:
+            # Otro formato posible
+            data = response['sensors']
+        
+        # Filtrar por tipo de sensor si se especifica
+        if sensor_type and data:
+            data = [record for record in data if record.get('sensor_type') == sensor_type]
+        
+        return data
     
     def get_latest_readings(self, device_id: Optional[str] = None) -> Dict[str, Any]:
         """
