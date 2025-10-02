@@ -152,7 +152,7 @@ class StreamlitCloudApp:
                 st.info("Configura tu token de HuggingFace en Streamlit Cloud Secrets")
             
             # Jetson URL
-            jetson_url = os.getenv("JETSON_API_URL", "https://northwest-institution-oxygen-latin.trycloudflare.com")
+            jetson_url = os.getenv("JETSON_API_URL", "https://couples-mario-repository-alive.trycloudflare.com")
             st.info(f"🔗 Jetson API: {jetson_url}")
             
             # Modelo de HuggingFace

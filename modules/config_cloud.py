@@ -3,7 +3,7 @@
 
 # Variables de entorno requeridas:
 # GROQ_API_KEY=tu_nueva_api_key_aqui
-# JETSON_API_URL=https://dpi-opportunity-hybrid-manufacturer.trycloudflare.com
+# JETSON_API_URL=https://couples-mario-repository-alive.trycloudflare.com
 
 # Configuración automática para cloud
 import os
@@ -15,7 +15,7 @@ if not os.getenv('GROQ_API_KEY'):
     pass
 
 if not os.getenv('JETSON_API_URL'):
-    os.environ['JETSON_API_URL'] = 'https://dpi-opportunity-hybrid-manufacturer.trycloudflare.com'
+    os.environ['JETSON_API_URL'] = 'https://couples-mario-repository-alive.trycloudflare.com'
 
 # Configuración de logging para cloud
 import logging

@@ -19,7 +19,7 @@ if not os.getenv('GROQ_API_KEY'):
     pass
 
 if not os.getenv('JETSON_API_URL'):
-    os.environ['JETSON_API_URL'] = 'https://northwest-institution-oxygen-latin.trycloudflare.com'
+    os.environ['JETSON_API_URL'] = 'https://couples-mario-repository-alive.trycloudflare.com'
 
 # Ejecutar la aplicación original con UI completa
 if __name__ == "__main__":

@@ -43,7 +43,7 @@ class CloudIoTAgent:
         self.groq_model = groq_model
         self.jetson_api_url = jetson_api_url or os.getenv(
             "JETSON_API_URL", 
-            "https://dpi-opportunity-hybrid-manufacturer.trycloudflare.com"
+            "https://couples-mario-repository-alive.trycloudflare.com"
         )
         
         # Inicializar componentes
