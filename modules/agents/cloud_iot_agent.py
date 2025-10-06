@@ -557,7 +557,41 @@ La API de la Jetson no está respondiendo. Por favor:
             is_direct_query = any(keyword in query_lower for keyword in direct_keywords)
             is_analytical_query = any(keyword in query_lower for keyword in analytical_keywords)
             
-            # Crear prompt adaptativo basado en el tipo de consulta
+            # 2. EVALUAR NECESIDAD DE VISUALIZACIÓN ANTES DE CONSTRUIR PROMPT
+            chart_paths = []
+            visualization_info = ""
+            
+            if self.visualization_engine and formatted_data:
+                try:
+                    # Analizar si se necesitan gráficos
+                    should_generate = self.visualization_engine.should_generate_charts(
+                        user_query
+                    )
+                    
+                    if should_generate:
+                        logger.info("📊 Generando visualizaciones para consulta avanzada...")
+                        
+                        # Usar raw_data en lugar de formatted_data para los gráficos
+                        raw_data = state.get("raw_data", [])
+                        
+                        if raw_data:
+                            # Generar gráficos apropiados
+                            chart_paths = self.visualization_engine.generate_charts(
+                                raw_data,
+                                user_query
+                            )
+                            
+                            if chart_paths:
+                                chart_names = [path.split('\\')[-1] for path in chart_paths]
+                                visualization_info = f"GRÁFICOS GENERADOS: {', '.join(chart_names)}"
+                                logger.info(f"✅ Generados {len(chart_paths)} gráficos: {chart_names}")
+                        else:
+                            logger.warning("No hay datos raw disponibles para generar gráficos")
+                        
+                except Exception as e:
+                    logger.warning(f"⚠️ Error generando visualizaciones: {e}")
+
+            # 3. Crear prompt adaptativo basado en el tipo de consulta
             if is_direct_query and not is_analytical_query:
                 # CONSULTA DIRECTA - Respuesta específica y concisa
                 prompt = f"""
@@ -569,6 +603,7 @@ La API de la Jetson no está respondiendo. Por favor:
                 - USA formato de LISTA cuando sea apropiado
                 - SÉ CONCISO pero completo
                 - NO uses secciones de análisis técnico extenso
+                {f"- IMPORTANTE: Se han generado GRÁFICOS para esta consulta: {visualization_info}" if visualization_info else ""}
                 
                 DATOS DISPONIBLES:
                 {formatted_data}
@@ -577,6 +612,7 @@ La API de la Jetson no está respondiendo. Por favor:
                 - Si pide "últimos 10 registros": Lista exactamente 10 registros
                 - Si pide "temperatura actual": Muestra valores actuales de temperatura
                 - Si pide "qué sensores hay": Lista los sensores disponibles
+                {f"- Si se solicitan gráficos: Menciona que se han generado: {visualization_info}" if visualization_info else ""}
                 
                 RESPONDE DIRECTAMENTE lo solicitado:
                 """
@@ -584,6 +620,7 @@ La API de la Jetson no está respondiendo. Por favor:
                 # CONSULTA ANALÍTICA - Análisis completo con secciones técnicas
                 prompt = f"""
                 Eres un asistente experto en análisis de datos de sensores IoT.
+                {f"IMPORTANTE: Se han generado GRÁFICOS para esta consulta: {visualization_info}" if visualization_info else ""}
                 
                 CONFIGURACIÓN REAL DE DISPOSITIVOS (IMPORTANTE - SEGUIR EXACTAMENTE):
                 
@@ -618,51 +655,22 @@ La API de la Jetson no está respondiendo. Por favor:
                 Analiza los datos reales disponibles siguiendo estas reglas exactas.
                 """
             
-            # 2. EVALUAR NECESIDAD DE VISUALIZACIÓN
-            chart_paths = []
-            visualization_info = ""
+            # 3. Generar respuesta con Groq
+            response = self.groq_integration.generate_response(prompt, model=self.groq_model)
             
-            if self.visualization_engine and formatted_data:
-                try:
-                    # Analizar si se necesitan gráficos
-                    should_generate = self.visualization_engine.should_generate_charts(
-                        user_query, 
-                        formatted_data
-                    )
-                    
-                    if should_generate:
-                        logger.info("📊 Generando visualizaciones para consulta avanzada...")
-                        
-                        # Usar raw_data en lugar de formatted_data para los gráficos
-                        raw_data = state.get("raw_data", [])
-                        
-                        if raw_data:
-                            # Generar gráficos apropiados
-                            chart_paths = self.visualization_engine.generate_charts(
-                                raw_data,
-                                user_query
-                            )
-                            
-                            if chart_paths:
-                                chart_names = [path.split('\\')[-1] for path in chart_paths]
-                                visualization_info = f"""
+            # 4. Integrar información de visualización con la respuesta
+            if visualization_info and "GRÁFICOS GENERADOS:" not in visualization_info:
+                # Formato más detallado para la respuesta final
+                chart_names = [path.split('\\')[-1] for path in chart_paths] if chart_paths else []
+                visualization_section = f"""
 
 📊 **GRÁFICOS GENERADOS**: {', '.join(chart_names)}
                                 
 Los gráficos han sido guardados y están disponibles para análisis visual de los datos.
 """
-                                logger.info(f"✅ Generados {len(chart_paths)} gráficos: {chart_names}")
-                        else:
-                            logger.warning("No hay datos raw disponibles para generar gráficos")
-                        
-                except Exception as e:
-                    logger.warning(f"⚠️ Error generando visualizaciones: {e}")
-            
-            # 3. Generar respuesta con Groq
-            response = self.groq_integration.generate_response(prompt, model=self.groq_model)
-            
-            # 4. Integrar información de visualización con la respuesta
-            final_response = response + visualization_info
+                final_response = response + visualization_section
+            else:
+                final_response = response
             
             # 5. Registrar uso de la consulta (estimar tokens basado en longitud)
             estimated_tokens = len(prompt) // 4 + len(response) // 4  # Estimación aproximada

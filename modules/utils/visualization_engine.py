@@ -105,8 +105,10 @@ class IoTVisualizationEngine:
         
         # PALABRAS CLAVE EXPLÍCITAS para gráficos
         explicit_chart_keywords = [
-            'gráfico', 'gráfica', 'graficar', 'visualizar', 'visualización',
-            'chart', 'plot', 'mostrar gráfico', 'con gráfico', 'graficamente'
+            'gráfico', 'grafico', 'gráfica', 'grafica', 'graficar', 
+            'visualizar', 'visualización', 'visualizacion',
+            'chart', 'plot', 'mostrar gráfico', 'mostrar grafico',
+            'con gráfico', 'con grafico', 'graficamente', 'gráficamente'
         ]
         
         # PALABRAS CLAVE que implican análisis avanzado (requieren gráficos)
