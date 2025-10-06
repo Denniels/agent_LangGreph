@@ -195,23 +195,15 @@ class IoTVisualizationEngine:
             
             plt.tight_layout()
             
-            # Guardar como archivo (para referencias) y obtener base64
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"time_series_{timestamp}.png"
-            filepath = os.path.join(self.charts_dir, filename)
-            
-            # Guardar archivo
-            plt.savefig(filepath, format='png', dpi=300, bbox_inches='tight')
-            
-            # También obtener base64 para visualización
+            # Convertir a base64 para mostrar directamente en Streamlit
             buffer = io.BytesIO()
             plt.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
             buffer.seek(0)
             chart_base64 = base64.b64encode(buffer.getvalue()).decode()
             plt.close()
             
-            logger.info(f"✅ Gráfico de serie temporal guardado: {filename}")
-            return filepath
+            logger.info(f"✅ Gráfico de serie temporal generado (base64)")
+            return chart_base64
             
         except Exception as e:
             logger.error(f"Error generando gráfico de serie temporal: {e}")
@@ -270,23 +262,15 @@ class IoTVisualizationEngine:
             plt.suptitle(title, fontsize=16, fontweight='bold', y=0.98)
             plt.tight_layout()
             
-            # Guardar como archivo y obtener base64
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"statistics_{timestamp}.png"
-            filepath = os.path.join(self.charts_dir, filename)
-            
-            # Guardar archivo
-            plt.savefig(filepath, format='png', dpi=300, bbox_inches='tight')
-            
-            # También obtener base64
+            # Convertir a base64 para mostrar directamente en Streamlit
             buffer = io.BytesIO()
             plt.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
             buffer.seek(0)
             chart_base64 = base64.b64encode(buffer.getvalue()).decode()
             plt.close()
             
-            logger.info(f"✅ Gráfico de estadísticas guardado: {filename}")
-            return filepath
+            logger.info(f"✅ Gráfico de estadísticas generado (base64)")
+            return chart_base64
             
         except Exception as e:
             logger.error(f"Error generando gráfico de estadísticas: {e}")
@@ -384,16 +368,15 @@ class IoTVisualizationEngine:
             plt.suptitle(title, fontsize=16, fontweight='bold', y=0.98)
             plt.tight_layout()
             
-            # Guardar archivo
-            charts_dir = self._setup_charts_directory()
-            filename = f"prediction_{int(time.time())}.png"
-            filepath = os.path.join(charts_dir, filename)
-            
-            plt.savefig(filepath, dpi=100, bbox_inches='tight')
+            # Convertir a base64 para mostrar directamente en Streamlit
+            buffer = io.BytesIO()
+            plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+            buffer.seek(0)
+            chart_base64 = base64.b64encode(buffer.getvalue()).decode()
             plt.close()
             
-            logger.info(f"📊 Gráfico de predicción guardado: {filepath}")
-            return filepath
+            logger.info(f"📊 Gráfico de predicción generado (base64)")
+            return chart_base64
             
         except Exception as e:
             logger.error(f"Error generando gráfico de predicción: {e}")

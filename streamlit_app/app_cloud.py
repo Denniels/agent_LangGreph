@@ -290,6 +290,25 @@ class StreamlitCloudApp:
                 </div>
                 """, unsafe_allow_html=True)
                 
+                # Mostrar gráficos si existen
+                if exchange.get('chart_base64_list'):
+                    st.markdown("**📊 Gráficos Generados:**")
+                    chart_list = exchange['chart_base64_list']
+                    
+                    # Mostrar cada gráfico
+                    for idx, chart_base64 in enumerate(chart_list):
+                        if chart_base64:  # Verificar que no sea None o vacío
+                            try:
+                                import base64
+                                from io import BytesIO
+                                
+                                # Convertir base64 a imagen para Streamlit
+                                chart_data = base64.b64decode(chart_base64)
+                                st.image(chart_data, caption=f"Gráfico {idx + 1}", use_column_width=True)
+                                
+                            except Exception as e:
+                                st.error(f"Error mostrando gráfico {idx + 1}: {str(e)}")
+                
                 # Métricas de la respuesta
                 if exchange.get('data_summary'):
                     data_summary = exchange['data_summary']
@@ -363,7 +382,8 @@ class StreamlitCloudApp:
                     "model_used": response.get("model_used", "Unknown"),
                     "data_summary": response.get("data_summary", {}),
                     "verification": response.get("verification", {}),
-                    "success": response.get("success", False)
+                    "success": response.get("success", False),
+                    "chart_base64_list": response.get("chart_base64_list", [])  # Gráficos base64
                 }
                 
                 st.session_state.chat_history.append(chat_entry)

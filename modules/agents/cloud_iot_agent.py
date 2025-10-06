@@ -240,9 +240,12 @@ class CloudIoTAgent:
                 for device in devices_result[:2]:  # Limitar a 2 dispositivos para cloud
                     device_id = device.get("device_id")
                     if device_id:
+                        # Para consultas por tiempo, obtener más datos
+                        # Para consultas generales, usar límite conservador
+                        limit = 500  # Aumentar significativamente para asegurar datos temporales
                         device_data = self.jetson_connector.get_sensor_data(
                             device_id=device_id,
-                            limit=20  # Menos datos para cloud
+                            limit=limit
                         )
                         
                         if device_data:
@@ -576,15 +579,16 @@ La API de la Jetson no está respondiendo. Por favor:
                         
                         if raw_data:
                             # Generar gráficos apropiados
-                            chart_paths = self.visualization_engine.generate_charts(
+                            chart_base64_list = self.visualization_engine.generate_charts(
                                 raw_data,
                                 user_query
                             )
                             
-                            if chart_paths:
-                                chart_names = [path.split('\\')[-1] for path in chart_paths]
-                                visualization_info = f"GRÁFICOS GENERADOS: {', '.join(chart_names)}"
-                                logger.info(f"✅ Generados {len(chart_paths)} gráficos: {chart_names}")
+                            if chart_base64_list:
+                                visualization_info = f"GRÁFICOS GENERADOS: {len(chart_base64_list)} gráficos"
+                                logger.info(f"✅ Generados {len(chart_base64_list)} gráficos en base64")
+                                # Guardar los base64 para usar después  
+                                chart_paths = chart_base64_list
                         else:
                             logger.warning("No hay datos raw disponibles para generar gráficos")
                         
@@ -689,7 +693,7 @@ Los gráficos han sido guardados y están disponibles para análisis visual de l
             state["final_response"] = final_response + usage_footer
             state["execution_status"] = "response_generated"
             state["usage_info"] = usage_info
-            state["chart_paths"] = chart_paths  # Incluir rutas de gráficos en el estado
+            state["chart_base64_list"] = chart_paths  # Incluir gráficos base64 en el estado
             
             logger.info(f"   ✅ Respuesta generada con Groq - Uso: {usage_info['requests_used']}/{usage_info['requests_limit']}")
             return state
@@ -781,7 +785,7 @@ Los gráficos han sido guardados y están disponibles para análisis visual de l
                 "response": result.get("final_response", "No se pudo generar respuesta"),
                 "execution_status": result.get("execution_status", "unknown"),
                 "verification": result.get("verification_status", {}),
-                "chart_paths": result.get("chart_paths", []),
+                "chart_base64_list": result.get("chart_base64_list", []),
                 "data_summary": {
                     "total_records": len(result.get("raw_data", [])),
                     "sensors": result.get("sensor_summary", {}).get("sensors", []),
