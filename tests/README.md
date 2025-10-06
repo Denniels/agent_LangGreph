@@ -6,14 +6,33 @@ Este directorio contiene la suite completa de tests para el proyecto del Agente 
 
 ```
 tests/
-├── __init__.py              # Información del módulo de tests
-├── conftest.py              # Configuración global y fixtures
-├── pytest.ini              # Configuración de pytest
-├── README.md               # Esta documentación
-├── test_database.py        # Tests de base de datos
-├── test_agent.py          # Tests del agente conversacional
-├── test_tools.py          # Tests de herramientas
-└── test_system.py         # Tests de integración completos
+├── __init__.py                          # Información del módulo de tests
+├── conftest.py                         # Configuración global y fixtures
+├── pytest.ini                         # Configuración de pytest
+├── README.md                          # Esta documentación
+│
+├── 🧪 Tests Unitarios
+├── test_database.py                   # Tests de base de datos
+├── test_agent.py                     # Tests del agente conversacional
+├── test_tools.py                     # Tests de herramientas
+├── test_system.py                    # Tests de integración completos
+├── test_simple.py                    # Tests básicos y de conectividad
+├── test_detail.py                    # Tests detallados de componentes
+├── test_import.py                    # Tests de importación de módulos
+├── test_urls.py                      # Tests de URLs y conectividad
+├── test_temperature_fix.py           # Tests de corrección de temperatura
+├── test_streamlit_agent.py           # Tests específicos del agente Streamlit
+│
+├── 🔍 Tests de Diagnóstico
+├── diagnose_api_access.py            # Diagnóstico exhaustivo de acceso a API
+├── diagnostic_results.json           # Resultados del diagnóstico de API
+├── streamlit_agent_test_results.json # Resultados del test del agente Streamlit
+│
+└── 📊 Tests de Integración Completa
+    ├── test_cloud_deployment.py      # Tests de despliegue en cloud
+    ├── test_groq_integration.py      # Tests de integración con Groq
+    ├── test_jetson_api.py            # Tests de API de Jetson
+    └── ... (otros tests existentes)
 ```
 
 ## 🚀 Cómo Ejecutar los Tests
@@ -86,7 +105,69 @@ pytest -x
 pytest --cov=modules --cov-report=html
 ```
 
-## 📋 Tipos de Tests
+## � Scripts de Diagnóstico
+
+Los siguientes scripts proporcionan diagnóstico exhaustivo del sistema:
+
+### diagnose_api_access.py
+**Diagnóstico completo de acceso a la API de Jetson**
+
+```bash
+# Ejecutar diagnóstico exhaustivo
+python tests/diagnose_api_access.py
+```
+
+Este script:
+- ✅ Prueba acceso directo a la API de Jetson
+- ✅ Verifica el conector del agente paso a paso  
+- ✅ Compara respuestas entre API directa vs conector
+- ✅ Identifica inconsistencias en dispositivos y datos
+- ✅ Genera reporte completo en `diagnostic_results.json`
+
+**Casos de uso:**
+- Cuando el frontend ve dispositivos que el agente no ve
+- Problemas de conectividad con la Jetson
+- Diferencias en cantidad de registros detectados
+- Validación de robustez del sistema
+
+### test_streamlit_agent.py  
+**Test específico del agente de Streamlit**
+
+```bash
+# Probar agente de Streamlit completo
+python tests/test_streamlit_agent.py
+```
+
+Este script:
+- ✅ Crea instancia real del CloudIoTAgent
+- ✅ Verifica health check completo
+- ✅ Ejecuta consultas específicas (dispositivos, registros)
+- ✅ Valida acceso al conector interno
+- ✅ Genera reporte en `streamlit_agent_test_results.json`
+
+**Casos de uso:**
+- Validar funcionamiento del agente antes del deploy
+- Verificar consultas específicas por dispositivo
+- Comprobar detección inteligente de consultas
+- Diagnóstico de respuestas del agente
+
+### Archivos de Resultados
+
+#### diagnostic_results.json
+Contiene resultados completos del diagnóstico de API incluyendo:
+- Pruebas directas a endpoints de Jetson
+- Resultados del conector del agente  
+- Comparación de datos API vs agente
+- Detalles de errores y conectividad
+
+#### streamlit_agent_test_results.json
+Contiene resultados del test del agente incluyendo:
+- Health check del agente y componentes
+- Respuestas a consultas específicas
+- Datos procesados y detectados
+- Performance del conector interno
+
+## �📋 Tipos de Tests
 
 ### 🔧 Tests Unitarios (`test_*.py`)
 
@@ -199,6 +280,54 @@ pytest --cov=modules --cov-report=html
 open htmlcov/index.html  # Mac/Linux
 start htmlcov/index.html # Windows
 ```
+
+## 🔧 Resolución de Problemas Específicos
+
+### Problema: Agente no ve todos los dispositivos
+**Síntomas**: El frontend muestra N dispositivos pero el agente solo ve M dispositivos
+
+```bash
+# 1. Diagnosticar acceso a API
+python tests/diagnose_api_access.py
+
+# 2. Verificar agente específicamente  
+python tests/test_streamlit_agent.py
+
+# 3. Revisar logs para identificar el problema
+```
+
+**Puntos de verificación:**
+- ✅ API de Jetson responde con todos los dispositivos
+- ✅ Conector del agente recibe todos los dispositivos
+- ✅ Procesamiento de datos no filtra dispositivos incorrectamente
+- ✅ Consultas específicas distribuyen datos por dispositivo
+
+### Problema: Consultas "últimos X registros" incorrectas
+**Síntomas**: Al pedir "últimos 10 registros de cada dispositivo" solo muestra de uno
+
+```bash
+# Verificar lógica de consultas específicas
+python tests/test_streamlit_agent.py
+```
+
+**Solución implementada:**
+- ✅ Detección de "por dispositivo" vs "total"
+- ✅ Distribución equitativa de registros
+- ✅ Formato mejorado agrupando por dispositivo
+
+### Problema: Conectividad robusta
+**Síntomas**: Sistema falla tras cortes de energía o cambios de URL
+
+```bash
+# Verificar sistema robusto
+python tests/diagnose_api_access.py
+```
+
+**Características verificadas:**
+- ✅ Auto-detección de URLs funcionales
+- ✅ Reconexión automática
+- ✅ Reintentos inteligentes
+- ✅ Fallback graceful
 
 ## 🔧 Configuración Personalizada
 
