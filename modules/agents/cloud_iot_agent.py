@@ -309,8 +309,27 @@ La API de la Jetson no está respondiendo. Por favor:
                 "timestamp_range": {"start": None, "end": None}
             }
             
-            # Procesar datos (máximo 50 registros para cloud)
-            processed_data = raw_data[:50] if len(raw_data) > 50 else raw_data
+            # Detectar si es consulta de "últimos X registros"
+            user_query = state.get("user_query", "").lower()
+            request_specific_count = False
+            requested_count = 10  # Default
+            
+            # Buscar números específicos en la consulta
+            import re
+            numbers = re.findall(r'\d+', user_query)
+            if numbers and ("últimos" in user_query or "ultimos" in user_query):
+                request_specific_count = True
+                requested_count = min(int(numbers[0]), 50)  # Máximo 50 para cloud
+                logger.info(f"   📋 Consulta específica detectada: últimos {requested_count} registros")
+            
+            # Procesar datos (limitar según el tipo de consulta)
+            if request_specific_count:
+                # Para consultas específicas, tomar exactamente la cantidad solicitada
+                processed_data = raw_data[:requested_count]
+                logger.info(f"   📊 Procesando {len(processed_data)} registros específicos")
+            else:
+                # Para análisis general, limitar a 50 registros para cloud
+                processed_data = raw_data[:50] if len(raw_data) > 50 else raw_data
             
             for record in processed_data:
                 device_id = record.get("device_id", "unknown")
@@ -334,7 +353,10 @@ La API de la Jetson no está respondiendo. Por favor:
             analysis["sensors"] = list(analysis["sensors"])
             
             # Formatear datos para el modelo
-            formatted_data = self._format_data_for_model(processed_data, analysis)
+            is_direct_query = any(keyword in state["user_query"].lower() for keyword in 
+                                  ["últimos", "ultimos", "listar", "mostrar", "dame", "dime"])
+            
+            formatted_data = self._format_data_for_model(processed_data, analysis, is_direct_query)
             
             state["formatted_data"] = formatted_data
             state["sensor_summary"] = analysis
@@ -394,42 +416,86 @@ La API de la Jetson no está respondiendo. Por favor:
             user_query = state["user_query"]
             formatted_data = state.get("formatted_data", "")
             
-            # Crear prompt específico para Groq con configuración real
-            prompt = f"""
-            Eres un asistente experto en análisis de datos de sensores IoT.
+            # DETECTAR TIPO DE CONSULTA PARA RESPUESTA APROPIADA
+            query_lower = user_query.lower()
             
-            CONFIGURACIÓN REAL DE DISPOSITIVOS (IMPORTANTE - SEGUIR EXACTAMENTE):
+            # Palabras clave para consultas DIRECTAS/ESPECÍFICAS
+            direct_keywords = [
+                "últimos", "ultimos", "listar", "mostrar", "dame", "dime",
+                "cuáles son", "cuales son", "qué datos", "que datos",
+                "registros de", "valores de", "lecturas de", "datos de"
+            ]
             
-            🔧 ARDUINO ETHERNET (arduino_eth_001):
-            - IP: 192.168.0.106
-            - SENSORES DISPONIBLES: t1, t2, avg (SOLO temperaturas)
-            - NO TIENE: LDR, sensor de luz, luminosidad, fotoresistor
+            # Palabras clave para consultas ANALÍTICAS
+            analytical_keywords = [
+                "analiza", "analizar", "tendencia", "patrón", "patron",
+                "interpreta", "evalúa", "evalua", "reporte", "informe",
+                "comportamiento", "variabilidad", "estabilidad"
+            ]
             
-            📡 ESP32 WIFI (esp32_wifi_001):
-            - IP: 192.168.0.105  
-            - SENSORES DISPONIBLES: ntc_entrada, ntc_salida (temperaturas) + ldr (sensor de luz)
-            - SÍ TIENE: Sensores de temperatura Y sensor LDR para luminosidad
+            is_direct_query = any(keyword in query_lower for keyword in direct_keywords)
+            is_analytical_query = any(keyword in query_lower for keyword in analytical_keywords)
             
-            CONSULTA DEL USUARIO: {user_query}
-            
-            DATOS REALES DE SENSORES:
-            {formatted_data}
-            
-            REGLAS DE ANÁLISIS (CUMPLIR ESTRICTAMENTE):
-            1. ✅ INCLUIR datos de LDR SOLO si se refiere a ESP32 WiFi
-            2. ❌ NUNCA mencionar LDR para Arduino Ethernet (no existe)
-            3. ✅ Arduino Ethernet SOLO tiene temperaturas (t1, t2, avg)
-            4. ✅ ESP32 WiFi tiene temperaturas (ntc_entrada, ntc_salida) Y ldr
-            5. 📊 Analiza TODOS los sensores disponibles del dispositivo consultado
-            6. 🚫 NO inventes sensores que no existen en la configuración
-            7. 📍 Especifica claramente qué dispositivo tiene qué sensores
-            
-            EJEMPLO DE RESPUESTA CORRECTA:
-            - "El ESP32 WiFi muestra temperaturas de 25°C y 26°C en ntc_entrada y ntc_salida, además de 450 unidades en el sensor LDR"
-            - "El Arduino Ethernet registra 24°C en t1, 25°C en t2, con promedio de 24.5°C (no tiene sensor LDR)"
-            
-            Analiza los datos reales disponibles siguiendo estas reglas exactas.
-            """
+            # Crear prompt adaptativo basado en el tipo de consulta
+            if is_direct_query and not is_analytical_query:
+                # CONSULTA DIRECTA - Respuesta específica y concisa
+                prompt = f"""
+                CONSULTA DIRECTA DEL USUARIO: {user_query}
+                
+                INSTRUCCIONES ESPECÍFICAS:
+                - El usuario hace una consulta DIRECTA y ESPECÍFICA
+                - RESPONDE EXACTAMENTE lo que pide, sin análisis extenso
+                - USA formato de LISTA cuando sea apropiado
+                - SÉ CONCISO pero completo
+                - NO uses secciones de análisis técnico extenso
+                
+                DATOS DISPONIBLES:
+                {formatted_data}
+                
+                EJEMPLOS DE RESPUESTA APROPIADA:
+                - Si pide "últimos 10 registros": Lista exactamente 10 registros
+                - Si pide "temperatura actual": Muestra valores actuales de temperatura
+                - Si pide "qué sensores hay": Lista los sensores disponibles
+                
+                RESPONDE DIRECTAMENTE lo solicitado:
+                """
+            else:
+                # CONSULTA ANALÍTICA - Análisis completo con secciones técnicas
+                prompt = f"""
+                Eres un asistente experto en análisis de datos de sensores IoT.
+                
+                CONFIGURACIÓN REAL DE DISPOSITIVOS (IMPORTANTE - SEGUIR EXACTAMENTE):
+                
+                🔧 ARDUINO ETHERNET (arduino_eth_001):
+                - IP: 192.168.0.106
+                - SENSORES DISPONIBLES: t1, t2, avg (SOLO temperaturas)
+                - NO TIENE: LDR, sensor de luz, luminosidad, fotoresistor
+                
+                📡 ESP32 WIFI (esp32_wifi_001):
+                - IP: 192.168.0.105  
+                - SENSORES DISPONIBLES: ntc_entrada, ntc_salida (temperaturas) + ldr (sensor de luz)
+                - SÍ TIENE: Sensores de temperatura Y sensor LDR para luminosidad
+                
+                CONSULTA DEL USUARIO: {user_query}
+                
+                DATOS REALES DE SENSORES:
+                {formatted_data}
+                
+                REGLAS DE ANÁLISIS (CUMPLIR ESTRICTAMENTE):
+                1. ✅ INCLUIR datos de LDR SOLO si se refiere a ESP32 WiFi
+                2. ❌ NUNCA mencionar LDR para Arduino Ethernet (no existe)
+                3. ✅ Arduino Ethernet SOLO tiene temperaturas (t1, t2, avg)
+                4. ✅ ESP32 WiFi tiene temperaturas (ntc_entrada, ntc_salida) Y ldr
+                5. 📊 Analiza TODOS los sensores disponibles del dispositivo consultado
+                6. 🚫 NO inventes sensores que no existen en la configuración
+                7. 📍 Especifica claramente qué dispositivo tiene qué sensores
+                
+                EJEMPLO DE RESPUESTA CORRECTA:
+                - "El ESP32 WiFi muestra temperaturas de 25°C y 26°C en ntc_entrada y ntc_salida, además de 450 unidades en el sensor LDR"
+                - "El Arduino Ethernet registra 24°C en t1, 25°C en t2, con promedio de 24.5°C (no tiene sensor LDR)"
+                
+                Analiza los datos reales disponibles siguiendo estas reglas exactas.
+                """
             
             # 2. Generar respuesta con Groq
             response = self.groq_integration.generate_response(prompt, model=self.groq_model)
@@ -601,53 +667,83 @@ La API de la Jetson no está respondiendo. Por favor:
                 ]
             }
     
-    def _format_data_for_model(self, data: List[Dict], analysis: Dict) -> str:
+    def _format_data_for_model(self, data: List[Dict], analysis: Dict, is_direct_query: bool = False) -> str:
         """
         Formatear datos para el modelo con configuración específica de dispositivos.
         
         Args:
             data: Datos de sensores
             analysis: Análisis de datos
+            is_direct_query: Si es una consulta directa que requiere lista de datos
             
         Returns:
             Datos formateados como string con configuración detallada
         """
-        formatted = f"=== CONFIGURACIÓN REAL DE DISPOSITIVOS ===\n"
+        if is_direct_query:
+            # FORMATO DIRECTO - Para consultas específicas como "últimos 10 registros"
+            formatted = f"=== LISTA DE REGISTROS SOLICITADOS ===\n"
+            formatted += f"Total disponible: {len(data)} registros\n\n"
+            
+            # Listar registros de forma clara y directa
+            for i, record in enumerate(data[:20], 1):  # Máximo 20 para no saturar
+                device_id = record.get("device_id", "unknown")
+                sensor_type = record.get("sensor_type", "unknown")
+                value = record.get("value", "N/A")
+                timestamp = record.get("timestamp", "unknown")
+                unit = record.get("unit", "")
+                
+                # Determinar unidad apropiada
+                if not unit:
+                    if sensor_type in ['t1', 't2', 'avg', 'temperature_1', 'temperature_2', 'temperature_avg', 'ntc_entrada', 'ntc_salida']:
+                        unit = "°C"
+                    elif sensor_type == 'ldr':
+                        unit = " (unidades de luz)"
+                
+                formatted += f"{i}. {device_id} - {sensor_type}: {value}{unit} ({timestamp})\n"
+            
+            if len(data) > 20:
+                formatted += f"\n... y {len(data) - 20} registros más disponibles.\n"
+            
+            return formatted
         
-        # Configuración específica para evitar alucinaciones
-        formatted += "🔧 ARDUINO ETHERNET (arduino_eth_001):\n"
-        formatted += "   - IP: 192.168.0.106\n"
-        formatted += "   - SENSORES: SOLO t1, t2, avg (temperaturas únicamente)\n"
-        formatted += "   - NO TIENE: LDR, sensor de luz, luminosidad\n\n"
-        
-        formatted += "📡 ESP32 WIFI (esp32_wifi_001):\n"
-        formatted += "   - IP: 192.168.0.105\n"
-        formatted += "   - SENSORES: ntc_entrada, ntc_salida (temperaturas) + ldr (luz)\n\n"
-        
-        formatted += f"=== DATOS ACTUALES ===\n"
-        formatted += f"Total de registros: {analysis['total_records']}\n"
-        formatted += f"Dispositivos activos: {', '.join(analysis['devices'])}\n"
-        formatted += f"Sensores disponibles: {', '.join(analysis['sensors'])}\n\n"
-        
-        # Últimas lecturas organizadas por dispositivo
-        formatted += "ÚLTIMAS LECTURAS POR DISPOSITIVO:\n"
-        latest_readings = analysis.get("latest_readings", {})
-        
-        # Agrupar por dispositivo
-        by_device = {}
-        for sensor, reading in latest_readings.items():
-            device = reading['device']
-            if device not in by_device:
-                by_device[device] = []
-            by_device[device].append((sensor, reading))
-        
-        for device, sensors in by_device.items():
-            formatted += f"\n{device}:\n"
-            for sensor, reading in sensors:
-                unit = "°C" if sensor in ['t1', 't2', 'avg', 'ntc_entrada', 'ntc_salida'] else ""
-                formatted += f"   • {sensor}: {reading['value']}{unit}\n"
-        
-        return formatted
+        else:
+            # FORMATO ANALÍTICO - Para análisis completo
+            formatted = f"=== CONFIGURACIÓN REAL DE DISPOSITIVOS ===\n"
+            
+            # Configuración específica para evitar alucinaciones
+            formatted += "🔧 ARDUINO ETHERNET (arduino_eth_001):\n"
+            formatted += "   - IP: 192.168.0.106\n"
+            formatted += "   - SENSORES: SOLO t1, t2, avg (temperaturas únicamente)\n"
+            formatted += "   - NO TIENE: LDR, sensor de luz, luminosidad\n\n"
+            
+            formatted += "📡 ESP32 WIFI (esp32_wifi_001):\n"
+            formatted += "   - IP: 192.168.0.105\n"
+            formatted += "   - SENSORES: ntc_entrada, ntc_salida (temperaturas) + ldr (luz)\n\n"
+            
+            formatted += f"=== DATOS ACTUALES ===\n"
+            formatted += f"Total de registros: {analysis['total_records']}\n"
+            formatted += f"Dispositivos activos: {', '.join(analysis['devices'])}\n"
+            formatted += f"Sensores disponibles: {', '.join(analysis['sensors'])}\n\n"
+            
+            # Últimas lecturas organizadas por dispositivo
+            formatted += "ÚLTIMAS LECTURAS POR DISPOSITIVO:\n"
+            latest_readings = analysis.get("latest_readings", {})
+            
+            # Agrupar por dispositivo
+            by_device = {}
+            for sensor, reading in latest_readings.items():
+                device = reading['device']
+                if device not in by_device:
+                    by_device[device] = []
+                by_device[device].append((sensor, reading))
+            
+            for device, sensors in by_device.items():
+                formatted += f"\n{device}:\n"
+                for sensor, reading in sensors:
+                    unit = "°C" if sensor in ['t1', 't2', 'avg', 'ntc_entrada', 'ntc_salida'] else ""
+                    formatted += f"   • {sensor}: {reading['value']}{unit}\n"
+            
+            return formatted
     
     def _generate_fallback_response(self, state: IoTAgentState) -> str:
         """
