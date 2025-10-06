@@ -312,6 +312,7 @@ La API de la Jetson no está respondiendo. Por favor:
             # Detectar si es consulta de "últimos X registros"
             user_query = state.get("user_query", "").lower()
             request_specific_count = False
+            request_per_device = False
             requested_count = 10  # Default
             
             # Buscar números específicos en la consulta
@@ -320,13 +321,31 @@ La API de la Jetson no está respondiendo. Por favor:
             if numbers and ("últimos" in user_query or "ultimos" in user_query):
                 request_specific_count = True
                 requested_count = min(int(numbers[0]), 50)  # Máximo 50 para cloud
-                logger.info(f"   📋 Consulta específica detectada: últimos {requested_count} registros")
+                
+                # Detectar si pide registros POR DISPOSITIVO
+                if "cada dispositivo" in user_query or "por dispositivo" in user_query:
+                    request_per_device = True
+                    logger.info(f"   📋 Consulta específica detectada: últimos {requested_count} registros POR DISPOSITIVO")
+                else:
+                    logger.info(f"   📋 Consulta específica detectada: últimos {requested_count} registros TOTAL")
             
             # Procesar datos (limitar según el tipo de consulta)
-            if request_specific_count:
-                # Para consultas específicas, tomar exactamente la cantidad solicitada
+            if request_specific_count and request_per_device:
+                # Para consultas de "X registros por dispositivo", distribuir equitativamente
+                processed_data = []
+                devices_found = set(record.get("device_id") for record in raw_data)
+                
+                for device_id in devices_found:
+                    device_records = [r for r in raw_data if r.get("device_id") == device_id]
+                    device_limited = device_records[:requested_count]
+                    processed_data.extend(device_limited)
+                    logger.info(f"   📱 {device_id}: {len(device_limited)} registros incluidos")
+                
+                logger.info(f"   📊 Procesando {len(processed_data)} registros específicos ({len(devices_found)} dispositivos)")
+            elif request_specific_count:
+                # Para consultas específicas totales, tomar exactamente la cantidad solicitada
                 processed_data = raw_data[:requested_count]
-                logger.info(f"   📊 Procesando {len(processed_data)} registros específicos")
+                logger.info(f"   📊 Procesando {len(processed_data)} registros específicos TOTAL")
             else:
                 # Para análisis general, limitar a 50 registros para cloud
                 processed_data = raw_data[:50] if len(raw_data) > 50 else raw_data
@@ -684,25 +703,57 @@ La API de la Jetson no está respondiendo. Por favor:
             formatted = f"=== LISTA DE REGISTROS SOLICITADOS ===\n"
             formatted += f"Total disponible: {len(data)} registros\n\n"
             
-            # Listar registros de forma clara y directa
-            for i, record in enumerate(data[:20], 1):  # Máximo 20 para no saturar
+            # Agrupar por dispositivo para mejor legibilidad en consultas por dispositivo
+            by_device = {}
+            for record in data:
                 device_id = record.get("device_id", "unknown")
-                sensor_type = record.get("sensor_type", "unknown")
-                value = record.get("value", "N/A")
-                timestamp = record.get("timestamp", "unknown")
-                unit = record.get("unit", "")
-                
-                # Determinar unidad apropiada
-                if not unit:
-                    if sensor_type in ['t1', 't2', 'avg', 'temperature_1', 'temperature_2', 'temperature_avg', 'ntc_entrada', 'ntc_salida']:
-                        unit = "°C"
-                    elif sensor_type == 'ldr':
-                        unit = " (unidades de luz)"
-                
-                formatted += f"{i}. {device_id} - {sensor_type}: {value}{unit} ({timestamp})\n"
+                if device_id not in by_device:
+                    by_device[device_id] = []
+                by_device[device_id].append(record)
             
-            if len(data) > 20:
-                formatted += f"\n... y {len(data) - 20} registros más disponibles.\n"
+            # Si hay múltiples dispositivos, mostrar agrupado por dispositivo
+            if len(by_device) > 1:
+                for device_id, device_records in by_device.items():
+                    formatted += f"📱 DISPOSITIVO: {device_id} ({len(device_records)} registros)\n"
+                    
+                    for i, record in enumerate(device_records[:15], 1):  # Máximo 15 por dispositivo
+                        sensor_type = record.get("sensor_type", "unknown")
+                        value = record.get("value", "N/A")
+                        timestamp = record.get("timestamp", "unknown")
+                        unit = record.get("unit", "")
+                        
+                        # Determinar unidad apropiada
+                        if not unit:
+                            if sensor_type in ['t1', 't2', 'avg', 'temperature_1', 'temperature_2', 'temperature_avg', 'ntc_entrada', 'ntc_salida']:
+                                unit = "°C"
+                            elif sensor_type == 'ldr':
+                                unit = " (unidades de luz)"
+                        
+                        formatted += f"   {i}. {sensor_type}: {value}{unit} ({timestamp})\n"
+                    
+                    if len(device_records) > 15:
+                        formatted += f"   ... y {len(device_records) - 15} registros más de este dispositivo.\n"
+                    formatted += "\n"
+            else:
+                # Un solo dispositivo, formato simple
+                for i, record in enumerate(data[:20], 1):  # Máximo 20 para no saturar
+                    device_id = record.get("device_id", "unknown")
+                    sensor_type = record.get("sensor_type", "unknown")
+                    value = record.get("value", "N/A")
+                    timestamp = record.get("timestamp", "unknown")
+                    unit = record.get("unit", "")
+                    
+                    # Determinar unidad apropiada
+                    if not unit:
+                        if sensor_type in ['t1', 't2', 'avg', 'temperature_1', 'temperature_2', 'temperature_avg', 'ntc_entrada', 'ntc_salida']:
+                            unit = "°C"
+                        elif sensor_type == 'ldr':
+                            unit = " (unidades de luz)"
+                    
+                    formatted += f"{i}. {device_id} - {sensor_type}: {value}{unit} ({timestamp})\n"
+                
+                if len(data) > 20:
+                    formatted += f"\n... y {len(data) - 20} registros más disponibles.\n"
             
             return formatted
         

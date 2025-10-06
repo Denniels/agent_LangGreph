@@ -1,0 +1,185 @@
+{
+  "timestamp": "2025-10-06T15:36:11.634186",
+  "api_results": {
+    "base_url": "https://couples-mario-repository-alive.trycloudflare.com",
+    "tests": {
+      "health": {
+        "status_code": 200,
+        "data": {
+          "status": "healthy",
+          "timestamp": "2025-10-06T18:30:16.481100+00:00",
+          "database": "connected",
+          "devices_count": 6
+        },
+        "success": true
+      },
+      "devices": {
+        "error": "'str' object has no attribute 'get'",
+        "success": false
+      },
+      "data_general": {
+        "error": "0",
+        "success": false
+      },
+      "data_arduino_eth_001": {
+        "error": "0",
+        "success": false
+      },
+      "data_esp32_wifi_001": {
+        "error": "0",
+        "success": false
+      }
+    },
+    "timestamp": "2025-10-06T15:30:11.541596"
+  },
+  "connector_results": {
+    "connector_info": {
+      "base_url": "https://couples-mario-repository-alive.trycloudflare.com",
+      "robust_mode": true
+    },
+    "tests": {
+      "robust_connectivity": {
+        "timestamp": "2025-10-06T18:31:30.937199+00:00",
+        "robust_mode": true,
+        "base_url": "https://couples-mario-repository-alive.trycloudflare.com",
+        "connectivity": "error",
+        "details": {
+          "error": "tuple indices must be integers or slices, not str"
+        }
+      },
+      "get_devices": {
+        "device_count": 2,
+        "devices": [
+          {
+            "device_id": "arduino_eth_001",
+            "device_type": "arduino_ethernet",
+            "ip_address": "192.168.0.110",
+            "port": 80,
+            "status": "online",
+            "description": null,
+            "has_data": true,
+            "last_seen": "2025-10-06T15:32:19.877689-03:00",
+            "online": true
+          },
+          {
+            "device_id": "esp32_wifi_001",
+            "device_type": "arduino_ethernet",
+            "ip_address": "192.168.0.101",
+            "port": 80,
+            "status": "online",
+            "description": null,
+            "has_data": true,
+            "last_seen": "2025-10-06T15:32:19.823185-03:00",
+            "online": true
+          }
+        ],
+        "success": true
+      },
+      "get_sensor_data": {
+        "data_count": 50,
+        "success": true,
+        "sample": {
+          "id": 5744843,
+          "device_id": "esp32_wifi_001",
+          "sensor_type": "ldr",
+          "value": 0.0,
+          "unit": "",
+          "raw_data": {
+            "ip": "192.168.0.101",
+            "sensors": {
+              "ldr": 0,
+              "ntc_salida": 32.25356,
+              "ntc_entrada": 22.67501
+            },
+            "device_id": "esp32_wifi_001"
+          },
+          "timestamp": "2025-10-06T15:33:09.899186-03:00",
+          "created_at": "2025-10-06T15:33:09.904570-03:00",
+          "synced": false
+        }
+      },
+      "get_sensor_data_arduino_eth_001": {
+        "data_count": 50,
+        "success": true,
+        "sample": {
+          "id": 5744873,
+          "device_id": "arduino_eth_001",
+          "sensor_type": "temperature_avg",
+          "value": 37.6,
+          "unit": "°C",
+          "raw_data": {
+            "status": "ok",
+            "sensors": {
+              "temperature_1": 41.8,
+              "temperature_2": 33.5,
+              "temperature_avg": 37.6
+            },
+            "device_id": "arduino_eth_001",
+            "timestamp": 341862339,
+            "device_type": "arduino_ethernet",
+            "message_type": "sensor_data"
+          },
+          "timestamp": "2025-10-06T15:33:49.893391-03:00",
+          "created_at": "2025-10-06T15:33:49.896903-03:00",
+          "synced": false
+        }
+      },
+      "get_sensor_data_esp32_wifi_001": {
+        "data_count": 50,
+        "success": true,
+        "sample": {
+          "id": 5744888,
+          "device_id": "esp32_wifi_001",
+          "sensor_type": "ldr",
+          "value": 0.0,
+          "unit": "",
+          "raw_data": {
+            "ip": "192.168.0.101",
+            "sensors": {
+              "ldr": 0,
+              "ntc_salida": 31.54757,
+              "ntc_entrada": 22.26309
+            },
+            "device_id": "esp32_wifi_001"
+          },
+          "timestamp": "2025-10-06T15:34:19.838085-03:00",
+          "created_at": "2025-10-06T15:34:19.841460-03:00",
+          "synced": false
+        }
+      },
+      "get_temperature_data": {
+        "data_count": 83,
+        "success": true,
+        "sample": {
+          "id": 5744927,
+          "device_id": "arduino_eth_001",
+          "sensor_type": "temperature_avg",
+          "value": 37.6,
+          "unit": "°C",
+          "raw_data": {
+            "status": "ok",
+            "sensors": {
+              "temperature_1": 41.7,
+              "temperature_2": 33.5,
+              "temperature_avg": 37.6
+            },
+            "device_id": "arduino_eth_001",
+            "timestamp": 341942573,
+            "device_type": "arduino_ethernet",
+            "message_type": "sensor_data"
+          },
+          "timestamp": "2025-10-06T15:35:10.173609-03:00",
+          "created_at": "2025-10-06T15:35:10.177084-03:00",
+          "synced": false
+        }
+      },
+      "format_data_for_llm": {
+        "formatted_length": 596,
+        "success": true
+      }
+    }
+  },
+  "agent_results": {
+    "error": "'CloudIoTAgent' object has no attribute 'invoke'"
+  }
+}
