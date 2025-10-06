@@ -309,28 +309,101 @@ La API de la Jetson no está respondiendo. Por favor:
                 "timestamp_range": {"start": None, "end": None}
             }
             
-            # Detectar si es consulta de "últimos X registros"
+            # Detectar tipos de consultas específicas
             user_query = state.get("user_query", "").lower()
             request_specific_count = False
             request_per_device = False
+            request_by_time = False
             requested_count = 10  # Default
+            time_value = 0
+            time_unit = ""
             
             # Buscar números específicos en la consulta
             import re
-            numbers = re.findall(r'\d+', user_query)
-            if numbers and ("últimos" in user_query or "ultimos" in user_query):
-                request_specific_count = True
-                requested_count = min(int(numbers[0]), 50)  # Máximo 50 para cloud
-                
-                # Detectar si pide registros POR DISPOSITIVO
-                if "cada dispositivo" in user_query or "por dispositivo" in user_query:
-                    request_per_device = True
-                    logger.info(f"   📋 Consulta específica detectada: últimos {requested_count} registros POR DISPOSITIVO")
-                else:
-                    logger.info(f"   📋 Consulta específica detectada: últimos {requested_count} registros TOTAL")
+            from datetime import datetime, timedelta
             
-            # Procesar datos (limitar según el tipo de consulta)
-            if request_specific_count and request_per_device:
+            numbers = re.findall(r'\d+', user_query)
+            
+            # DETECCIÓN DE CONSULTAS POR TIEMPO
+            time_keywords = ["minuto", "minutos", "hora", "horas", "min", "hrs"]
+            if numbers and ("últimos" in user_query or "ultimos" in user_query):
+                # Verificar si es consulta por tiempo
+                for keyword in time_keywords:
+                    if keyword in user_query:
+                        request_by_time = True
+                        time_value = int(numbers[0])
+                        time_unit = keyword
+                        logger.info(f"   ⏰ Consulta por TIEMPO detectada: últimos {time_value} {time_unit}")
+                        break
+                
+                # Si no es por tiempo, es por cantidad de registros
+                if not request_by_time:
+                    request_specific_count = True
+                    requested_count = min(int(numbers[0]), 50)  # Máximo 50 para cloud
+                    
+                    # Detectar si pide registros POR DISPOSITIVO
+                    if "cada dispositivo" in user_query or "por dispositivo" in user_query:
+                        request_per_device = True
+                        logger.info(f"   📋 Consulta específica detectada: últimos {requested_count} registros POR DISPOSITIVO")
+                    else:
+                        logger.info(f"   📋 Consulta específica detectada: últimos {requested_count} registros TOTAL")
+            
+            # Procesar datos según el tipo de consulta
+            if request_by_time:
+                # CONSULTAS POR TIEMPO - Filtrar por ventana temporal
+                from datetime import datetime, timedelta
+                import dateutil.parser
+                
+                # Calcular tiempo límite
+                now = datetime.now()
+                if time_unit in ["minuto", "minutos", "min"]:
+                    time_limit = now - timedelta(minutes=time_value)
+                elif time_unit in ["hora", "horas", "hrs"]:
+                    time_limit = now - timedelta(hours=time_value)
+                else:
+                    time_limit = now - timedelta(minutes=time_value)  # Default a minutos
+                
+                logger.info(f"   ⏰ Filtrando datos desde: {time_limit.strftime('%H:%M:%S')}")
+                
+                # Filtrar datos por tiempo para TODOS los dispositivos
+                processed_data = []
+                devices_found = set(record.get("device_id") for record in raw_data)
+                total_in_timeframe = 0
+                
+                for device_id in devices_found:
+                    device_records = [r for r in raw_data if r.get("device_id") == device_id]
+                    device_time_filtered = []
+                    
+                    for record in device_records:
+                        try:
+                            # Parsear timestamp del registro
+                            timestamp_str = record.get("timestamp", "")
+                            if timestamp_str:
+                                # Intentar parsear diferentes formatos de timestamp
+                                try:
+                                    record_time = dateutil.parser.parse(timestamp_str)
+                                    # Convertir a naive datetime si tiene timezone info
+                                    if record_time.tzinfo is not None:
+                                        record_time = record_time.replace(tzinfo=None)
+                                except:
+                                    # Fallback: asumir formato ISO básico
+                                    record_time = datetime.fromisoformat(timestamp_str.replace('Z', '').split('+')[0].split('-03:00')[0])
+                                
+                                # Verificar si está en el rango de tiempo
+                                if record_time >= time_limit:
+                                    device_time_filtered.append(record)
+                        except Exception as e:
+                            logger.warning(f"   ⚠️ Error parseando timestamp {timestamp_str}: {e}")
+                            # Si no se puede parsear, incluir el registro (mejor incluir que excluir)
+                            device_time_filtered.append(record)
+                    
+                    processed_data.extend(device_time_filtered)
+                    total_in_timeframe += len(device_time_filtered)
+                    logger.info(f"   📱 {device_id}: {len(device_time_filtered)} registros en últimos {time_value} {time_unit}")
+                
+                logger.info(f"   📊 Procesando {len(processed_data)} registros por TIEMPO ({len(devices_found)} dispositivos)")
+                
+            elif request_specific_count and request_per_device:
                 # Para consultas de "X registros por dispositivo", distribuir equitativamente
                 processed_data = []
                 devices_found = set(record.get("device_id") for record in raw_data)
@@ -375,7 +448,16 @@ La API de la Jetson no está respondiendo. Por favor:
             is_direct_query = any(keyword in state["user_query"].lower() for keyword in 
                                   ["últimos", "ultimos", "listar", "mostrar", "dame", "dime"])
             
-            formatted_data = self._format_data_for_model(processed_data, analysis, is_direct_query)
+            # Información adicional para el formateo
+            query_info = {
+                "is_time_query": request_by_time,
+                "time_value": time_value if request_by_time else None,
+                "time_unit": time_unit if request_by_time else None,
+                "is_per_device": request_per_device,
+                "is_count_query": request_specific_count
+            }
+            
+            formatted_data = self._format_data_for_model(processed_data, analysis, is_direct_query, query_info)
             
             state["formatted_data"] = formatted_data
             state["sensor_summary"] = analysis
@@ -686,7 +768,7 @@ La API de la Jetson no está respondiendo. Por favor:
                 ]
             }
     
-    def _format_data_for_model(self, data: List[Dict], analysis: Dict, is_direct_query: bool = False) -> str:
+    def _format_data_for_model(self, data: List[Dict], analysis: Dict, is_direct_query: bool = False, query_info: Dict = None) -> str:
         """
         Formatear datos para el modelo con configuración específica de dispositivos.
         
@@ -694,16 +776,29 @@ La API de la Jetson no está respondiendo. Por favor:
             data: Datos de sensores
             analysis: Análisis de datos
             is_direct_query: Si es una consulta directa que requiere lista de datos
+            query_info: Información adicional sobre el tipo de consulta
             
         Returns:
             Datos formateados como string con configuración detallada
         """
+        if query_info is None:
+            query_info = {}
         if is_direct_query:
-            # FORMATO DIRECTO - Para consultas específicas como "últimos 10 registros"
-            formatted = f"=== LISTA DE REGISTROS SOLICITADOS ===\n"
-            formatted += f"Total disponible: {len(data)} registros\n\n"
+            # FORMATO DIRECTO - Para consultas específicas como "últimos 10 registros" o "últimos X minutos"
             
-            # Agrupar por dispositivo para mejor legibilidad en consultas por dispositivo
+            # Título adaptativo según el tipo de consulta
+            if query_info.get("is_time_query", False):
+                time_value = query_info.get("time_value", "X")
+                time_unit = query_info.get("time_unit", "tiempo")
+                formatted = f"=== REGISTROS DE LOS ÚLTIMOS {time_value} {time_unit.upper()} ===\n"
+            elif query_info.get("is_count_query", False):
+                formatted = f"=== LISTA DE REGISTROS SOLICITADOS ===\n"
+            else:
+                formatted = f"=== REGISTROS DE SENSORES ===\n"
+            
+            formatted += f"Total encontrado: {len(data)} registros\n\n"
+            
+            # Agrupar por dispositivo para mejor legibilidad
             by_device = {}
             for record in data:
                 device_id = record.get("device_id", "unknown")
@@ -711,8 +806,8 @@ La API de la Jetson no está respondiendo. Por favor:
                     by_device[device_id] = []
                 by_device[device_id].append(record)
             
-            # Si hay múltiples dispositivos, mostrar agrupado por dispositivo
-            if len(by_device) > 1:
+            # Siempre mostrar agrupado por dispositivo para consultas de tiempo
+            if len(by_device) > 1 or query_info.get("is_time_query", False):
                 for device_id, device_records in by_device.items():
                     formatted += f"📱 DISPOSITIVO: {device_id} ({len(device_records)} registros)\n"
                     

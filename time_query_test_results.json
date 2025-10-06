@@ -1,0 +1,76 @@
+{
+  "timestamp": "2025-10-06T17:09:08.398110",
+  "time_query_tests": [
+    {
+      "query": "listame los registros de los últimos 3 minutos",
+      "success": true,
+      "devices_count": 2,
+      "devices": [
+        "esp32_wifi_001",
+        "arduino_eth_001"
+      ],
+      "records_count": 40,
+      "response_preview": "**ÚLTIMOS 3 MINUTOS DE REGISTROS**\n\n**DISPOSITIVO: esp32_wifi_001**\n\n1. ldr: 4.420024 (unidades de luz) (2025-10-06T16:54:30.124145-03:00)\n2. ntc_salida: 29.35113°C (2025-10-06T16:54:30.115575-03:00)\n3. ntc_entrada: 21.54919°C (2025-10-06T16:54:30.100584-03:00)\n4. ldr: 0.0 (unidades de luz) (2025-10..."
+    },
+    {
+      "query": "muestra los datos de los últimos 5 minutos",
+      "success": true,
+      "devices_count": 2,
+      "devices": [
+        "esp32_wifi_001",
+        "arduino_eth_001"
+      ],
+      "records_count": 40,
+      "response_preview": "**ÚLTIMOS 5 MINUTOS**\n\n**DISPOSITIVO: esp32_wifi_001**\n\n1. ldr: 0.0 (unidades de luz) (2025-10-06T16:55:40.043145-03:00)\n2. ntc_salida: 29.46536°C (2025-10-06T16:55:40.036477-03:00)\n3. ntc_entrada: 21.65722°C (2025-10-06T16:55:40.028773-03:00)\n4. ldr: 0.0 (unidades de luz) (2025-10-06T16:55:30.01549..."
+    },
+    {
+      "query": "dame los registros de la última hora",
+      "success": true,
+      "devices_count": 2,
+      "devices": [
+        "esp32_wifi_001",
+        "arduino_eth_001"
+      ],
+      "records_count": 40,
+      "response_preview": "**ÚLTIMOS 40 REGISTROS**\n\n**DISPOSITIVO: arduino_eth_001 (20 registros)**\n\n1. temperature_avg: 38.6°C (2025-10-06T16:57:20.041999-03:00)\n2. temperature_2: 34.5°C (2025-10-06T16:57:20.035657-03:00)\n3. temperature_1: 42.6°C (2025-10-06T16:57:20.028583-03:00)\n4. temperature_avg: 38.6°C (2025-10-06T16:5..."
+    },
+    {
+      "query": "últimos 10 minutos de datos",
+      "success": true,
+      "devices_count": 2,
+      "devices": [
+        "esp32_wifi_001",
+        "arduino_eth_001"
+      ],
+      "records_count": 40,
+      "response_preview": "\n            ⚠️ **Sistema en Modo Fallback**\n            \n            🔍 **Consulta sobre Temperatura**\n            - Dispositivos disponibles: ESP32 WiFi, Arduino Ethernet\n            - Sensores de temperatura: Disponibles\n            - Estado: Para obtener datos actuales, se requiere conexión con l..."
+    },
+    {
+      "query": "registros de los últimos 2 hrs",
+      "success": true,
+      "devices_count": 2,
+      "devices": [
+        "esp32_wifi_001",
+        "arduino_eth_001"
+      ],
+      "records_count": 40,
+      "response_preview": "**ÚLTIMOS 2 HRS**\n\n**DISPOSITIVO: esp32_wifi_001 (20 registros)**\n\n1. ldr: 0.0 (unidades de luz) (2025-10-06T17:02:09.983273-03:00)\n2. ntc_salida: 28.91827°C (2025-10-06T17:02:09.977291-03:00)\n3. ntc_entrada: 21.16052°C (2025-10-06T17:02:09.969821-03:00)\n4. ldr: 3.345543 (unidades de luz) (2025-10-0..."
+    }
+  ],
+  "comparison": {
+    "count_query": {
+      "devices": [
+        "esp32_wifi_001",
+        "arduino_eth_001"
+      ],
+      "records": 40
+    },
+    "time_query": {
+      "devices": [
+        "esp32_wifi_001",
+        "arduino_eth_001"
+      ],
+      "records": 40
+    }
+  }
+}
