@@ -17,6 +17,9 @@ typing-extensions>=4.0.0
 plotly>=5.0.0
 pandas>=2.0.0
 
+# Machine Learning para visualizaciones
+scikit-learn>=1.3.0
+
 # Dependencias para generación de reportes
 kaleido>=0.2.1
 reportlab>=4.0.0

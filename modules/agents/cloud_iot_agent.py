@@ -24,6 +24,15 @@ from langgraph.checkpoint.memory import MemorySaver
 
 logger = logging.getLogger(__name__)
 
+# Import del motor de visualización
+try:
+    from modules.utils.visualization_engine import create_visualization_engine
+    VISUALIZATION_AVAILABLE = True
+    logger.info("🎨 Motor de visualización cargado exitosamente")
+except ImportError as e:
+    VISUALIZATION_AVAILABLE = False
+    logger.warning(f"⚠️ Motor de visualización no disponible: {e}")
+
 class CloudIoTAgent:
     """
     Agente IoT para cloud que usa Groq en lugar de Ollama/HuggingFace.
@@ -51,6 +60,17 @@ class CloudIoTAgent:
         self.jetson_connector = None
         self.graph = None
         self.memory = MemorySaver()
+        
+        # Motor de visualización (inicialización con fallback)
+        self.visualization_engine = None
+        try:
+            from modules.utils.visualization_engine import IoTVisualizationEngine
+            self.visualization_engine = IoTVisualizationEngine()
+            logger.info("✅ Motor de visualización inicializado")
+        except ImportError as e:
+            logger.warning(f"Motor de visualización no disponible: {e}")
+        except Exception as e:
+            logger.error(f"Error inicializando motor de visualización: {e}")
         
         # Estado del agente
         self.is_initialized = False
@@ -598,14 +618,57 @@ La API de la Jetson no está respondiendo. Por favor:
                 Analiza los datos reales disponibles siguiendo estas reglas exactas.
                 """
             
-            # 2. Generar respuesta con Groq
+            # 2. EVALUAR NECESIDAD DE VISUALIZACIÓN
+            chart_paths = []
+            visualization_info = ""
+            
+            if self.visualization_engine and formatted_data:
+                try:
+                    # Analizar si se necesitan gráficos
+                    should_generate = self.visualization_engine.should_generate_charts(
+                        user_query, 
+                        formatted_data
+                    )
+                    
+                    if should_generate:
+                        logger.info("📊 Generando visualizaciones para consulta avanzada...")
+                        
+                        # Usar raw_data en lugar de formatted_data para los gráficos
+                        raw_data = state.get("raw_data", [])
+                        
+                        if raw_data:
+                            # Generar gráficos apropiados
+                            chart_paths = self.visualization_engine.generate_charts(
+                                raw_data,
+                                user_query
+                            )
+                            
+                            if chart_paths:
+                                chart_names = [path.split('\\')[-1] for path in chart_paths]
+                                visualization_info = f"""
+
+📊 **GRÁFICOS GENERADOS**: {', '.join(chart_names)}
+                                
+Los gráficos han sido guardados y están disponibles para análisis visual de los datos.
+"""
+                                logger.info(f"✅ Generados {len(chart_paths)} gráficos: {chart_names}")
+                        else:
+                            logger.warning("No hay datos raw disponibles para generar gráficos")
+                        
+                except Exception as e:
+                    logger.warning(f"⚠️ Error generando visualizaciones: {e}")
+            
+            # 3. Generar respuesta con Groq
             response = self.groq_integration.generate_response(prompt, model=self.groq_model)
             
-            # 3. Registrar uso de la consulta (estimar tokens basado en longitud)
+            # 4. Integrar información de visualización con la respuesta
+            final_response = response + visualization_info
+            
+            # 5. Registrar uso de la consulta (estimar tokens basado en longitud)
             estimated_tokens = len(prompt) // 4 + len(response) // 4  # Estimación aproximada
             usage_info = usage_tracker.track_request(self.groq_model, estimated_tokens)
             
-            # 4. Agregar información de uso a la respuesta si está cerca del límite
+            # 6. Agregar información de uso a la respuesta si está cerca del límite
             usage_footer = ""
             if usage_info["status"] in ["warning", "critical"]:
                 remaining_percentage = 100 - usage_info["requests_percentage"]
@@ -615,9 +678,10 @@ La API de la Jetson no está respondiendo. Por favor:
 📊 **Uso de API**: {usage_info['requests_used']}/{usage_info['requests_limit']} consultas ({remaining_percentage:.1f}% disponible)
 """
             
-            state["final_response"] = response + usage_footer
+            state["final_response"] = final_response + usage_footer
             state["execution_status"] = "response_generated"
             state["usage_info"] = usage_info
+            state["chart_paths"] = chart_paths  # Incluir rutas de gráficos en el estado
             
             logger.info(f"   ✅ Respuesta generada con Groq - Uso: {usage_info['requests_used']}/{usage_info['requests_limit']}")
             return state
@@ -709,6 +773,7 @@ La API de la Jetson no está respondiendo. Por favor:
                 "response": result.get("final_response", "No se pudo generar respuesta"),
                 "execution_status": result.get("execution_status", "unknown"),
                 "verification": result.get("verification_status", {}),
+                "chart_paths": result.get("chart_paths", []),
                 "data_summary": {
                     "total_records": len(result.get("raw_data", [])),
                     "sensors": result.get("sensor_summary", {}).get("sensors", []),

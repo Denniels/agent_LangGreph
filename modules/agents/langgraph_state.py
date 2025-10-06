@@ -55,6 +55,9 @@ class IoTAgentState(TypedDict):
     # Respuesta
     final_response: Optional[str]
     
+    # Visualización
+    chart_paths: List[str]
+    
     # Verificación de datos (prevención de alucinaciones)
     needs_correction: bool
     correction_prompt: Optional[str]
@@ -156,6 +159,7 @@ def create_initial_state(user_query: str, messages: List[BaseMessage] = None) ->
         analyzed_query=None,
         analysis_results={},
         final_response=None,
+        chart_paths=[],
         needs_correction=False,
         correction_prompt=None,
         original_response=None,
