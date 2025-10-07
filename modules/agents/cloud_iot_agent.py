@@ -1066,6 +1066,37 @@ Los gráficos han sido guardados y están disponibles para análisis visual de l
                 "error": str(e),
                 "timestamp": datetime.now().isoformat()
             }
+    
+    def process_query_sync(self, user_query: str, thread_id: str = "cloud-session") -> str:
+        """
+        Versión síncrona de process_query para usar en Streamlit.
+        
+        Args:
+            user_query: Consulta del usuario
+            thread_id: ID del hilo de conversación
+            
+        Returns:
+            String con la respuesta procesada
+        """
+        import asyncio
+        import nest_asyncio
+        
+        try:
+            # Aplicar nest_asyncio para permitir loops anidados
+            nest_asyncio.apply()
+            
+            # Ejecutar la función async
+            result = asyncio.run(self.process_query(user_query, thread_id))
+            
+            # Extraer respuesta del resultado
+            if isinstance(result, dict):
+                return result.get('response', str(result))
+            else:
+                return str(result)
+                
+        except Exception as e:
+            logger.error(f"Error en process_query_sync: {e}")
+            return f"❌ Error procesando consulta: {str(e)}"
 
 
 # Función de utilidad para crear instancia cloud

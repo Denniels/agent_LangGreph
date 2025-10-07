@@ -243,11 +243,21 @@ def display_chat_interface():
         with st.chat_message("assistant"):
             with st.spinner("🤖 Procesando consulta..."):
                 try:
-                    # Procesar con el agente
-                    response = cloud_agent.process_query(prompt)
+                    # Procesar con el agente (USANDO FUNCIÓN SÍNCRONA)
+                    if hasattr(cloud_agent, 'process_query_sync'):
+                        # Usar la función síncrona optimizada
+                        response_text = cloud_agent.process_query_sync(prompt)
+                    else:
+                        # Fallback al método async si es necesario
+                        import asyncio
+                        import nest_asyncio
+                        nest_asyncio.apply()
+                        
+                        response = asyncio.run(cloud_agent.process_query(prompt))
+                        response_text = response.get('response', str(response)) if isinstance(response, dict) else str(response)
                     
                     # Mostrar respuesta textual
-                    st.markdown(response)
+                    st.markdown(response_text)
                     
                     # GENERAR Y MOSTRAR GRÁFICOS SI SE SOLICITAN
                     charts_generated = []
@@ -303,7 +313,7 @@ def display_chat_interface():
                     # Agregar al historial
                     st.session_state.messages.append({
                         "role": "assistant", 
-                        "content": response,
+                        "content": response_text,  # Usar response_text en lugar de response
                         "charts": charts_generated
                     })
                     
