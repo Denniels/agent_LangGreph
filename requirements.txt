@@ -21,6 +21,7 @@ pandas==2.3.0
 matplotlib==3.10.6
 numpy==2.1.0
 plotly==5.17.0
+kaleido==0.2.1
 
 # Reportes y documentos
 reportlab==4.2.5

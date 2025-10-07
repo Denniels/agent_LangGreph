@@ -32,8 +32,21 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
 logger = logging.getLogger(__name__)
 
-# Configurar kaleido para exportar gráficos
-pio.kaleido.scope.default_format = "png"
+# Configurar kaleido para exportar gráficos (ROBUSTO)
+try:
+    # Usar la nueva API de plotly (post September 2025)
+    try:
+        pio.defaults.default_format = "png"
+        KALEIDO_AVAILABLE = True
+        logger.info("✅ Kaleido disponible - usando nueva API")
+    except AttributeError:
+        # Fallback a API antigua para compatibilidad
+        pio.kaleido.scope.default_format = "png"
+        KALEIDO_AVAILABLE = True
+        logger.info("✅ Kaleido disponible - usando API legacy")
+except (AttributeError, Exception) as e:
+    KALEIDO_AVAILABLE = False
+    logger.warning(f"⚠️ Kaleido no disponible - usando matplotlib como fallback: {e}")
 
 class ReportGenerator:
     """Generador de reportes ejecutivos flexible"""
@@ -525,37 +538,40 @@ class ReportGenerator:
         try:
             logger.info(f"Intentando exportar figura a PNG - width: {width}, height: {height}")
             
-            # Método 1: Intentar con kaleido
-            try:
-                # Configurar kaleido explícitamente
-                pio.kaleido.scope.default_width = width
-                pio.kaleido.scope.default_height = height
-                pio.kaleido.scope.default_scale = 1
-                
-                # Intentar exportar
-                img_bytes = pio.to_image(fig, format="png", width=width, height=height, scale=1)
-                
-                if img_bytes and len(img_bytes) > 1000:  # Al menos 1KB para ser válido
-                    logger.info(f"✅ Figura exportada con kaleido - tamaño: {len(img_bytes)} bytes")
-                    return img_bytes
-                else:
-                    logger.warning("Kaleido devolvió imagen muy pequeña, intentando método alternativo")
-                    raise Exception("Imagen kaleido muy pequeña")
-                    
-            except Exception as kaleido_error:
-                logger.warning(f"Kaleido falló: {kaleido_error}, intentando método alternativo")
-                
-                # Método 2: Usar plotly con orca (si está disponible)
+            # Método 1: Intentar con kaleido (solo si está disponible)
+            if KALEIDO_AVAILABLE:
                 try:
-                    img_bytes = pio.to_image(fig, format="png", width=width, height=height, engine="orca")
-                    if img_bytes and len(img_bytes) > 1000:
-                        logger.info(f"✅ Figura exportada con orca - tamaño: {len(img_bytes)} bytes")
+                    # Configurar kaleido explícitamente
+                    pio.kaleido.scope.default_width = width
+                    pio.kaleido.scope.default_height = height
+                    pio.kaleido.scope.default_scale = 1
+                    
+                    # Intentar exportar
+                    img_bytes = pio.to_image(fig, format="png", width=width, height=height, scale=1)
+                    
+                    if img_bytes and len(img_bytes) > 1000:  # Al menos 1KB para ser válido
+                        logger.info(f"✅ Figura exportada con kaleido - tamaño: {len(img_bytes)} bytes")
                         return img_bytes
-                except:
-                    pass
+                    else:
+                        logger.warning("Kaleido devolvió imagen muy pequeña, intentando método alternativo")
+                        raise Exception("Imagen kaleido muy pequeña")
+                        
+                except Exception as kaleido_error:
+                    logger.warning(f"Kaleido falló: {kaleido_error}, intentando método alternativo")
+            else:
+                logger.info("Kaleido no disponible, usando métodos alternativos")
                 
-                # Método 3: Fallback a matplotlib
-                return self._create_matplotlib_chart(fig, width, height)
+            # Método 2: Usar plotly con orca (si está disponible)
+            try:
+                img_bytes = pio.to_image(fig, format="png", width=width, height=height, engine="orca")
+                if img_bytes and len(img_bytes) > 1000:
+                    logger.info(f"✅ Figura exportada con orca - tamaño: {len(img_bytes)} bytes")
+                    return img_bytes
+            except Exception as orca_error:
+                logger.warning(f"Orca también falló: {orca_error}")
+                
+            # Método 3: Fallback a matplotlib
+            return self._create_matplotlib_chart(fig, width, height)
                 
         except Exception as e:
             logger.error(f"Error exporting figure to PNG: {e}")
