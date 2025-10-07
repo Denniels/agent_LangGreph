@@ -97,7 +97,7 @@ class JetsonAPIConnector:
             Lista de dispositivos
         """
         try:
-            response = self._make_request('GET', '/api/devices')
+            response = self._make_request('GET', '/devices')
             
             # Manejar diferentes formatos de respuesta
             if isinstance(response, list):
@@ -145,9 +145,9 @@ class JetsonAPIConnector:
             
             # Construir endpoint
             if device_id:
-                endpoint = f"/api/data/{device_id}"
+                endpoint = f"/data/{device_id}"
             else:
-                endpoint = "/api/data"
+                endpoint = "/data"
             
             # Hacer petición
             response = self._make_request('GET', endpoint, params=params)
@@ -181,7 +181,7 @@ class JetsonAPIConnector:
             Estado de salud de la API
         """
         try:
-            response = self._make_request('GET', '/api/health')
+            response = self._make_request('GET', '/health')
             
             return {
                 "status": "healthy",
@@ -257,7 +257,7 @@ class JetsonAPIConnector:
             Dict con el estado del sistema
         """
         try:
-            response = self._make_request('GET', '/api/status')
+            response = self._make_request('GET', '/status')
             return response
         except Exception:
             return self.get_health()
@@ -273,7 +273,7 @@ class JetsonAPIConnector:
             Dict con información del dispositivo
         """
         try:
-            response = self._make_request('GET', f'/api/devices/{device_id}')
+            response = self._make_request('GET', f'/devices/{device_id}')
             if response.get('success') and 'data' in response:
                 return response['data']
             return response

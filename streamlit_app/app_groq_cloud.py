@@ -274,21 +274,57 @@ def display_chat_interface():
         with st.chat_message("assistant"):
             with st.spinner("🤖 Procesando consulta..."):
                 try:
-                    # Procesar con el agente (USANDO FUNCIÓN SÍNCRONA)
-                    if hasattr(cloud_agent, 'process_query_sync'):
-                        # Usar la función síncrona optimizada
-                        response_text = cloud_agent.process_query_sync(prompt)
-                    else:
-                        # Fallback al método async si es necesario
-                        import asyncio
-                        import nest_asyncio
-                        nest_asyncio.apply()
-                        
-                        response = asyncio.run(cloud_agent.process_query(prompt))
-                        response_text = response.get('response', str(response)) if isinstance(response, dict) else str(response)
+                    # MÉTODO 1: Intentar con el agente principal
+                    response_text = None
+                    method_used = "principal"
+                    
+                    try:
+                        if hasattr(cloud_agent, 'process_query_sync'):
+                            # Usar la función síncrona optimizada
+                            response_text = cloud_agent.process_query_sync(prompt)
+                        else:
+                            # Fallback al método async si es necesario
+                            import asyncio
+                            import nest_asyncio
+                            nest_asyncio.apply()
+                            
+                            response = asyncio.run(cloud_agent.process_query(prompt))
+                            response_text = response.get('response', str(response)) if isinstance(response, dict) else str(response)
+                    
+                    except Exception as main_agent_error:
+                        st.warning(f"⚠️ Agente principal no disponible: {main_agent_error}")
+                        response_text = None
+                    
+                    # MÉTODO 2: FALLBACK ULTRA-SIMPLE (usa misma instancia del frontend)
+                    if not response_text or "Error" in response_text or len(response_text.strip()) < 10:
+                        try:
+                            st.info("🚀 Activando sistema de respaldo robusto...")
+                            
+                            # Importar y usar UltraSimpleAgent con la misma instancia del frontend
+                            from modules.agents.ultra_simple_agent import create_ultra_simple_agent
+                            
+                            # Usar EXACTAMENTE la misma instancia que usa el frontend exitoso
+                            ultra_agent = create_ultra_simple_agent(jetson_connector)
+                            response_text = ultra_agent.process_query(prompt)
+                            method_used = "ultra_simple_fallback"
+                            
+                            st.success("✅ Respuesta generada con sistema de respaldo")
+                            
+                        except Exception as fallback_error:
+                            st.error(f"❌ Error en sistema de respaldo: {fallback_error}")
+                            response_text = f"❌ Error: Tanto el agente principal como el sistema de respaldo fallaron. Verifica la conectividad."
+                            method_used = "error"
                     
                     # Mostrar respuesta textual
-                    st.markdown(response_text)
+                    if response_text:
+                        st.markdown(response_text)
+                        
+                        # Debug info opcional
+                        if method_used != "principal":
+                            st.caption(f"🔧 Método usado: {method_used}")
+                    else:
+                        st.error("❌ No se pudo generar respuesta")
+                        response_text = "❌ Error interno del sistema"
                     
                     # GENERAR Y MOSTRAR GRÁFICOS SI SE SOLICITAN
                     charts_generated = []
