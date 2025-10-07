@@ -27,7 +27,7 @@ st.set_page_config(
 
 # Variables de entorno
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-JETSON_API_URL = "https://couples-mario-repository-alive.trycloudflare.com"
+JETSON_API_URL = "https://featured-emotions-hometown-offset.trycloudflare.com"
 
 # CACHE AGRESIVO para módulos pesados
 @st.cache_resource(show_spinner="🔄 Cargando módulos...")

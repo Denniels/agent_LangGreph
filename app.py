@@ -26,7 +26,7 @@ if not os.getenv('GROQ_API_KEY'):
     print("⚠️ GROQ_API_KEY debe configurarse en Streamlit Cloud Secrets")
 
 if not os.getenv('JETSON_API_URL'):
-    os.environ['JETSON_API_URL'] = 'https://couples-mario-repository-alive.trycloudflare.com'
+    os.environ['JETSON_API_URL'] = 'https://featured-emotions-hometown-offset.trycloudflare.com'
 
 # EJECUTAR APLICACIÓN PRINCIPAL
 if __name__ == "__main__":

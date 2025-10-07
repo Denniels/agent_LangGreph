@@ -251,7 +251,7 @@ def create_jetson_connector(url: str = None) -> JetsonAPIConnector:
         Instancia de JetsonAPIConnector
     """
     if not url:
-        url = "https://couples-mario-repository-alive.trycloudflare.com"
+        url = "https://featured-emotions-hometown-offset.trycloudflare.com"
     
     return JetsonAPIConnector(url)
 

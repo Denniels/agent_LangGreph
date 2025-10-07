@@ -37,7 +37,7 @@ git push origin main
 
 ```toml
 GROQ_API_KEY = "gsk_TU_API_KEY_REAL_AQUI"
-JETSON_API_URL = "https://couples-mario-repository-alive.trycloudflare.com"
+JETSON_API_URL = "https://featured-emotions-hometown-offset.trycloudflare.com"
 ```
 
 5. **¡IMPORTANTE!** Reemplaza `TU_API_KEY_REAL_AQUI` con tu API key de Groq

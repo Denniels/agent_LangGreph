@@ -7,7 +7,7 @@ import json
 
 def debug_api_format():
     """Revisar el formato real de la API"""
-    base_url = "https://couples-mario-repository-alive.trycloudflare.com"
+    base_url = "https://featured-emotions-hometown-offset.trycloudflare.com"
     
     print("🔍 DIAGNÓSTICO DIRECTO DE LA API")
     print("=" * 50)
