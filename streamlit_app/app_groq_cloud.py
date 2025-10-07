@@ -32,7 +32,7 @@ JETSON_API_URL = "https://couples-mario-repository-alive.trycloudflare.com"
 # CACHE AGRESIVO para módulos pesados
 @st.cache_resource(show_spinner="🔄 Cargando módulos...")
 def load_project_modules():
-    """Cargar TODOS los módulos del proyecto de forma optimizada"""
+    """Cargar TODOS los módulos del proyecto de forma optimizada y robusta"""
     import sys
     from datetime import datetime, timedelta
     import traceback
@@ -43,18 +43,38 @@ def load_project_modules():
         sys.path.append(project_root)
     
     try:
-        # Imports principales
+        # Imports principales (críticos)
         from modules.agents.cloud_iot_agent import CloudIoTAgent
         from modules.tools.jetson_api_connector import JetsonAPIConnector
         from modules.utils.usage_tracker import usage_tracker
         
-        # Imports para reportes (RESTAURADOS)
-        from modules.agents.reporting import ReportGenerator
-        from modules.utils.streamlit_usage_display import (
-            display_usage_metrics, 
-            display_usage_alert,
-            display_model_limits_info
-        )
+        # Imports para reportes (con manejo de errores)
+        try:
+            from modules.agents.reporting import ReportGenerator
+            report_generator_available = True
+        except Exception as e:
+            st.warning(f"⚠️ Sistema de reportes no disponible: {str(e)}")
+            ReportGenerator = None
+            report_generator_available = False
+        
+        # Imports para UI de uso (con fallback robusto)
+        try:
+            from modules.utils.streamlit_usage_display import (
+                display_usage_metrics, 
+                display_usage_alert,
+                display_model_limits_info
+            )
+            usage_display_available = True
+        except Exception as e:
+            st.warning(f"⚠️ Displays de uso no disponibles: {str(e)}")
+            # Crear funciones fallback
+            def display_usage_metrics(*args, **kwargs):
+                st.info("📊 Métricas de uso no disponibles")
+            def display_usage_alert(*args, **kwargs):
+                pass
+            def display_model_limits_info(*args, **kwargs):
+                st.info("ℹ️ Información de límites no disponible")
+            usage_display_available = False
         
         return {
             'CloudIoTAgent': CloudIoTAgent,
@@ -66,10 +86,13 @@ def load_project_modules():
             'display_model_limits_info': display_model_limits_info,
             'datetime': datetime,
             'timedelta': timedelta,
-            'traceback': traceback
+            'traceback': traceback,
+            'report_generator_available': report_generator_available,
+            'usage_display_available': usage_display_available
         }
     except Exception as e:
-        st.error(f"❌ Error cargando módulos: {str(e)}")
+        st.error(f"❌ Error crítico cargando módulos: {str(e)}")
+        st.error("🔧 Verifique que todas las dependencias estén instaladas en Streamlit Cloud")
         return None
 
 @st.cache_resource(show_spinner="🔧 Inicializando servicios...")
@@ -89,13 +112,21 @@ def initialize_services():
         # Crear agente IoT completo
         cloud_agent = modules['CloudIoTAgent']()
         
-        # Crear generador de reportes
-        report_generator = modules['ReportGenerator'](jetson_connector=jetson_connector)
+        # Crear generador de reportes (si está disponible)
+        if modules.get('report_generator_available', False) and modules['ReportGenerator']:
+            try:
+                report_generator = modules['ReportGenerator'](jetson_connector=jetson_connector)
+            except Exception as e:
+                st.warning(f"⚠️ Error inicializando reportes: {str(e)}")
+                report_generator = None
+        else:
+            report_generator = None
         
         return cloud_agent, jetson_connector, report_generator
         
     except Exception as e:
         st.error(f"❌ Error inicializando servicios: {str(e)}")
+        st.error("🔧 Intente recargar la página o verificar la configuración de Streamlit Cloud")
         return None, None, None
 
 def create_matplotlib_chart(data, query_type="time_series"):

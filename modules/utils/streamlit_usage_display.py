@@ -7,13 +7,20 @@ de forma clara y atractiva en la interfaz de Streamlit.
 """
 
 import streamlit as st
-import plotly.graph_objects as go
-import plotly.express as px
 from datetime import datetime, timedelta
 from typing import Dict, Any
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Imports robustos para Streamlit Cloud
+try:
+    import plotly.graph_objects as go
+    import plotly.express as px
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    PLOTLY_AVAILABLE = False
+    logger.warning("⚠️ Plotly no disponible - usando gráficos básicos")
 
 def display_usage_metrics(usage_info: Dict[str, Any], key_prefix: str = "usage"):
     """
@@ -152,28 +159,33 @@ def display_usage_progress_bar(usage_info: Dict[str, Any], key_prefix: str):
                 bar_color = "#00aa44"  # Verde
             
             # Crear gráfico de barra con validación de datos
-            try:
-                fig_requests = go.Figure(go.Bar(
-                    x=[requests_percentage],
-                    y=["Uso"],
-                    orientation='h',
-                    marker_color=bar_color,
-                    text=f"{requests_percentage:.1f}%",
-                    textposition='middle right' if requests_percentage > 5 else 'outside'
-                ))
-                
-                fig_requests.update_layout(
-                    xaxis=dict(range=[0, 100], title="Porcentaje"),
-                    yaxis=dict(showticklabels=False),
-                    height=100,
-                    margin=dict(l=0, r=0, t=0, b=0),
-                    showlegend=False
-                )
-                
-                st.plotly_chart(fig_requests, use_container_width=True, key=f"{key_prefix}_requests_bar")
-                
-            except Exception as chart_error:
-                # Fallback simple si falla el gráfico
+            if PLOTLY_AVAILABLE:
+                try:
+                    fig_requests = go.Figure(go.Bar(
+                        x=[requests_percentage],
+                        y=["Uso"],
+                        orientation='h',
+                        marker_color=bar_color,
+                        text=f"{requests_percentage:.1f}%",
+                        textposition='middle right' if requests_percentage > 5 else 'outside'
+                    ))
+                    
+                    fig_requests.update_layout(
+                        xaxis=dict(range=[0, 100], title="Porcentaje"),
+                        yaxis=dict(showticklabels=False),
+                        height=100,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        showlegend=False
+                    )
+                    
+                    st.plotly_chart(fig_requests, use_container_width=True, key=f"{key_prefix}_requests_bar")
+                    
+                except Exception as chart_error:
+                    # Fallback simple si falla el gráfico
+                    st.progress(requests_percentage / 100.0)
+                    st.caption(f"Uso: {requests_percentage:.1f}%")
+            else:
+                # Fallback cuando plotly no está disponible
                 st.progress(requests_percentage / 100.0)
                 st.caption(f"Uso: {requests_percentage:.1f}%")
         
@@ -188,28 +200,33 @@ def display_usage_progress_bar(usage_info: Dict[str, Any], key_prefix: str):
             else:
                 bar_color = "#0066cc"  # Azul
             
-            try:
-                fig_tokens = go.Figure(go.Bar(
-                    x=[tokens_percentage],
-                    y=["Uso"],
-                    orientation='h',
-                    marker_color=bar_color,
-                    text=f"{tokens_percentage:.1f}%",
-                    textposition='middle right' if tokens_percentage > 5 else 'outside'
-                ))
-                
-                fig_tokens.update_layout(
-                    xaxis=dict(range=[0, 100], title="Porcentaje"),
-                    yaxis=dict(showticklabels=False),
-                    height=100,
-                    margin=dict(l=0, r=0, t=0, b=0),
-                    showlegend=False
-                )
-                
-                st.plotly_chart(fig_tokens, use_container_width=True, key=f"{key_prefix}_tokens_bar")
-                
-            except Exception as chart_error:
-                # Fallback simple si falla el gráfico
+            if PLOTLY_AVAILABLE:
+                try:
+                    fig_tokens = go.Figure(go.Bar(
+                        x=[tokens_percentage],
+                        y=["Uso"],
+                        orientation='h',
+                        marker_color=bar_color,
+                        text=f"{tokens_percentage:.1f}%",
+                        textposition='middle right' if tokens_percentage > 5 else 'outside'
+                    ))
+                    
+                    fig_tokens.update_layout(
+                        xaxis=dict(range=[0, 100], title="Porcentaje"),
+                        yaxis=dict(showticklabels=False),
+                        height=100,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        showlegend=False
+                    )
+                    
+                    st.plotly_chart(fig_tokens, use_container_width=True, key=f"{key_prefix}_tokens_bar")
+                    
+                except Exception as chart_error:
+                    # Fallback simple si falla el gráfico
+                    st.progress(tokens_percentage / 100.0)
+                    st.caption(f"Uso: {tokens_percentage:.1f}%")
+            else:
+                # Fallback cuando plotly no está disponible
                 st.progress(tokens_percentage / 100.0)
                 st.caption(f"Uso: {tokens_percentage:.1f}%")
         
