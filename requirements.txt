@@ -10,11 +10,18 @@ langchain-groq>=0.1.0
 langgraph>=0.0.50
 pydantic>=2.0.0
 
-# Análisis de datos BÁSICO
+# Análisis y visualización ESENCIALES
 pandas>=2.0.0
-
-# Visualización LIGERA
 matplotlib>=3.6.0
+numpy>=1.24.0
 
-# Machine Learning OPCIONAL (solo si se necesita)
+# Para generación de reportes (RESTAURADO)
+reportlab>=4.0.0
+openpyxl>=3.1.0
+
+# Utilidades adicionales necesarias
+loguru>=0.7.0
+nest-asyncio>=1.5.0
+
+# Machine Learning LIGERO
 scikit-learn>=1.3.0

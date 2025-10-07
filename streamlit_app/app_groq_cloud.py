@@ -1,286 +1,571 @@
 #!/usr/bin/env python3
 """
-APLICACIÓN STREAMLIT PARA AGENTE IOT - VERSIÓN CORREGIDA
-======================================================
+APLICACIÓN STREAMLIT COMPLETA Y OPTIMIZADA - VERSIÓN DEFINITIVA
+=============================================================
 
-Versión completamente funcional que:
-- Ve TODOS los dispositivos
-- Genera gráficos cuando se solicita
-- Acceso robusto a API
+✅ INCLUYE TODAS LAS FUNCIONALIDADES:
+- Chat IoT Agent con gráficos integrados
+- Generador de Reportes completo  
+- Visualizaciones matplotlib nativas
+- Carga súper optimizada
+- Sin pérdida de funcionalidades
+
+🚀 OPTIMIZADA PARA STREAMLIT CLOUD
 """
 
+# IMPORTS MÍNIMOS AL INICIO para carga rápida
 import streamlit as st
-import sys
 import os
-import uuid
-import glob
-import time
-from datetime import datetime, timedelta
-import traceback
 
-# Configuración de página
+# Configuración MÍNIMA
 st.set_page_config(
-    page_title="🤖 Agente IoT Avanzado",
-    page_icon="🤖",
+    page_title="🤖 Agente IoT Completo",
+    page_icon="🤖", 
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Agregar path del proyecto
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if project_root not in sys.path:
-    sys.path.append(project_root)
+# Variables de entorno
+GROQ_API_KEY = os.getenv('GROQ_API_KEY')
+JETSON_API_URL = "https://couples-mario-repository-alive.trycloudflare.com"
 
-# Importaciones del proyecto
-try:
-    from modules.agents.cloud_iot_agent import CloudIoTAgent
-    from modules.tools.jetson_api_connector import JetsonAPIConnector
-    from modules.utils.usage_tracker import usage_tracker
+# CACHE AGRESIVO para módulos pesados
+@st.cache_resource(show_spinner="🔄 Cargando módulos...")
+def load_project_modules():
+    """Cargar TODOS los módulos del proyecto de forma optimizada"""
+    import sys
+    from datetime import datetime, timedelta
+    import traceback
     
-    # Variables de configuración
-    GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-    JETSON_API_URL = "https://couples-mario-repository-alive.trycloudflare.com"
+    # Agregar path del proyecto
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if project_root not in sys.path:
+        sys.path.append(project_root)
     
-except ImportError as e:
-    st.error(f"❌ Error importando módulos: {str(e)}")
-    st.code(traceback.format_exc())
-    st.stop()
+    try:
+        # Imports principales
+        from modules.agents.cloud_iot_agent import CloudIoTAgent
+        from modules.tools.jetson_api_connector import JetsonAPIConnector
+        from modules.utils.usage_tracker import usage_tracker
+        
+        # Imports para reportes (RESTAURADOS)
+        from modules.agents.reporting import ReportGenerator
+        from modules.utils.streamlit_usage_display import (
+            display_usage_metrics, 
+            display_usage_alert,
+            display_model_limits_info
+        )
+        
+        return {
+            'CloudIoTAgent': CloudIoTAgent,
+            'JetsonAPIConnector': JetsonAPIConnector, 
+            'ReportGenerator': ReportGenerator,
+            'usage_tracker': usage_tracker,
+            'display_usage_metrics': display_usage_metrics,
+            'display_usage_alert': display_usage_alert,
+            'display_model_limits_info': display_model_limits_info,
+            'datetime': datetime,
+            'timedelta': timedelta,
+            'traceback': traceback
+        }
+    except Exception as e:
+        st.error(f"❌ Error cargando módulos: {str(e)}")
+        return None
 
-# Cache para servicios
-@st.cache_resource
+@st.cache_resource(show_spinner="🔧 Inicializando servicios...")
 def initialize_services():
-    """Inicializar servicios con conexión robusta"""
+    """Inicializar servicios con verificación robusta"""
+    modules = load_project_modules()
+    if not modules:
+        return None, None, None
+    
     try:
         # Crear conector de Jetson
-        jetson_connector = JetsonAPIConnector(JETSON_API_URL)
+        jetson_connector = modules['JetsonAPIConnector'](JETSON_API_URL)
         
-        # Verificar conexión
+        # Verificar conectividad
         devices = jetson_connector.get_devices()
-        st.success(f"✅ Conectado a API Jetson: {len(devices)} dispositivos detectados")
         
         # Crear agente IoT completo
-        cloud_agent = CloudIoTAgent()
+        cloud_agent = modules['CloudIoTAgent']()
         
-        return cloud_agent, jetson_connector
+        # Crear generador de reportes
+        report_generator = modules['ReportGenerator'](jetson_connector=jetson_connector)
+        
+        return cloud_agent, jetson_connector, report_generator
         
     except Exception as e:
         st.error(f"❌ Error inicializando servicios: {str(e)}")
-        st.code(traceback.format_exc())
-        return None, None
+        return None, None, None
+
+def create_matplotlib_chart(data, query_type="time_series"):
+    """Crear gráficos matplotlib directamente en Streamlit"""
+    modules = load_project_modules()
+    if not modules or not data:
+        return None
+    
+    try:
+        import matplotlib.pyplot as plt
+        import pandas as pd
+        import numpy as np
+        
+        # Configurar matplotlib para Streamlit
+        plt.style.use('default')
+        
+        if query_type == "time_series":
+            # Gráfico de series temporales
+            fig, ax = plt.subplots(figsize=(12, 6))
+            
+            df = pd.DataFrame(data)
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            
+            # Agrupar por dispositivo y sensor
+            for device_id in df['device_id'].unique():
+                device_data = df[df['device_id'] == device_id]
+                
+                for sensor_type in device_data['sensor_type'].unique():
+                    sensor_data = device_data[device_data['sensor_type'] == sensor_type]
+                    
+                    if len(sensor_data) > 0:
+                        label = f"{device_id} - {sensor_type}"
+                        ax.plot(sensor_data['timestamp'], sensor_data['value'], 
+                               marker='o', label=label, linewidth=2, markersize=4)
+            
+            ax.set_title("📈 Series Temporales de Sensores", fontsize=14, fontweight='bold')
+            ax.set_xlabel("Tiempo")
+            ax.set_ylabel("Valor del Sensor")
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+            
+            # Rotar etiquetas de fecha
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            
+            return fig
+            
+        elif query_type == "statistics":
+            # Gráfico de estadísticas
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+            
+            df = pd.DataFrame(data)
+            
+            # Gráfico de barras por dispositivo
+            device_counts = df['device_id'].value_counts()
+            ax1.bar(device_counts.index, device_counts.values, color=['#FF6B6B', '#4ECDC4', '#45B7D1'])
+            ax1.set_title("📊 Registros por Dispositivo")
+            ax1.set_ylabel("Número de Registros")
+            
+            # Gráfico de distribución de valores por sensor
+            for i, sensor_type in enumerate(df['sensor_type'].unique()):
+                sensor_data = df[df['sensor_type'] == sensor_type]
+                ax2.hist(sensor_data['value'], alpha=0.7, label=sensor_type, bins=10)
+            
+            ax2.set_title("📊 Distribución de Valores por Sensor")
+            ax2.set_xlabel("Valor")
+            ax2.set_ylabel("Frecuencia")
+            ax2.legend()
+            
+            plt.tight_layout()
+            return fig
+    
+    except Exception as e:
+        st.error(f"Error creando gráfico: {e}")
+        return None
 
 def display_chat_interface():
-    """Interfaz principal del chat"""
+    """Interfaz de chat con gráficos integrados"""
     st.title("🤖 Chat con Agente IoT")
     
     if not GROQ_API_KEY:
         st.error("❌ Configure GROQ_API_KEY en las variables de entorno")
         return
     
-    # Inicializar servicios
-    cloud_agent, jetson_connector = initialize_services()
+    # Cargar servicios
+    cloud_agent, jetson_connector, _ = initialize_services()
     
     if not cloud_agent or not jetson_connector:
         st.error("❌ No se pudieron inicializar los servicios")
         return
     
-    # Información de dispositivos disponibles
-    with st.expander("📱 Información de Dispositivos", expanded=True):
+    # Información de dispositivos compacta
+    with st.expander("📱 Estado de Dispositivos", expanded=False):
         try:
             devices = jetson_connector.get_devices()
-            st.write(f"**Dispositivos detectados:** {len(devices)}")
+            col1, col2, col3 = st.columns(3)
             
+            with col1:
+                st.metric("🔌 Dispositivos", len(devices))
+            
+            device_info = []
             for device in devices:
                 device_id = device.get('device_id', 'N/A')
-                last_seen = device.get('last_seen', 'N/A')
-                st.write(f"- **{device_id}**: Último registro {last_seen}")
-                
-                # Mostrar datos recientes
                 try:
-                    recent_data = jetson_connector.get_sensor_data(device_id=device_id, limit=5)
-                    if recent_data:
-                        st.write(f"  - Registros recientes: {len(recent_data)}")
-                        latest = recent_data[0] if recent_data else {}
-                        sensor_type = latest.get('sensor_type', 'N/A')
-                        value = latest.get('value', 'N/A')
-                        timestamp = latest.get('timestamp', 'N/A')
-                        st.write(f"  - Última lectura: {sensor_type} = {value} ({timestamp})")
-                    else:
-                        st.write("  - Sin datos recientes")
-                except Exception as e:
-                    st.write(f"  - Error obteniendo datos: {e}")
+                    recent_data = jetson_connector.get_sensor_data(device_id=device_id, limit=1)
+                    status = "🟢 Activo" if recent_data else "🔴 Inactivo"
+                    device_info.append(f"**{device_id}**: {status}")
+                except:
+                    device_info.append(f"**{device_id}**: ❓ Desconocido")
+            
+            with col2:
+                for info in device_info[:len(device_info)//2 + 1]:
+                    st.write(info)
+            
+            with col3:
+                for info in device_info[len(device_info)//2 + 1:]:
+                    st.write(info)
                     
         except Exception as e:
-            st.error(f"Error obteniendo dispositivos: {e}")
+            st.error(f"Error: {e}")
     
     # Historial de chat
     if "messages" not in st.session_state:
         st.session_state.messages = []
     
-    # Mostrar mensajes anteriores
+    # Mostrar mensajes
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+            
+            # Mostrar gráficos si los hay
+            if "charts" in message and message["charts"]:
+                for chart_fig in message["charts"]:
+                    st.pyplot(chart_fig)
     
     # Input del usuario
-    if prompt := st.chat_input("Escribe tu consulta sobre sensores IoT..."):
-        # Agregar mensaje del usuario
+    if prompt := st.chat_input("💬 Escribe tu consulta sobre sensores IoT..."):
+        # Mensaje del usuario
         st.session_state.messages.append({"role": "user", "content": prompt})
         
         with st.chat_message("user"):
             st.markdown(prompt)
         
-        # Procesar consulta
+        # Respuesta del agente
         with st.chat_message("assistant"):
             with st.spinner("🤖 Procesando consulta..."):
                 try:
-                    # Usar el agente IoT completo
+                    # Procesar con el agente
                     response = cloud_agent.process_query(prompt)
                     
-                    # Mostrar respuesta
+                    # Mostrar respuesta textual
                     st.markdown(response)
                     
-                    # VERIFICAR Y MOSTRAR GRÁFICOS SI SE GENERARON
-                    try:
-                        # Buscar archivos de gráficos recientes
-                        import glob
-                        import time
+                    # GENERAR Y MOSTRAR GRÁFICOS SI SE SOLICITAN
+                    charts_generated = []
+                    
+                    # Detectar si se solicitan gráficos
+                    chart_keywords = ['grafica', 'gráfica', 'grafico', 'gráfico', 'visualizar', 'chart', 'plot']
+                    needs_charts = any(keyword in prompt.lower() for keyword in chart_keywords)
+                    
+                    if needs_charts:
+                        st.info("📊 Generando gráficos...")
                         
-                        # Buscar en directorio charts/
-                        chart_patterns = [
-                            "charts/time_series_*.png",
-                            "charts/statistics_*.png", 
-                            "charts/prediction_*.png"
-                        ]
-                        
-                        charts_found = []
-                        for pattern in chart_patterns:
-                            files = glob.glob(pattern)
-                            # Filtrar archivos creados en los últimos 30 segundos
-                            recent_files = [f for f in files if time.time() - os.path.getmtime(f) < 30]
-                            charts_found.extend(recent_files)
-                        
-                        if charts_found:
-                            st.success(f"📊 **GRÁFICOS GENERADOS**: {len(charts_found)} archivos")
+                        try:
+                            # Obtener datos recientes para gráficos
+                            all_chart_data = []
+                            devices = jetson_connector.get_devices()
                             
-                            # Mostrar cada gráfico
-                            for chart_path in sorted(charts_found):
-                                chart_name = os.path.basename(chart_path)
-                                st.subheader(f"📈 {chart_name}")
+                            for device in devices:
+                                device_id = device.get('device_id')
+                                if device_id:
+                                    # Obtener más datos para gráficos
+                                    device_data = jetson_connector.get_sensor_data(
+                                        device_id=device_id, 
+                                        limit=50  # Más datos para gráficos mejores
+                                    )
+                                    if device_data:
+                                        all_chart_data.extend(device_data)
+                            
+                            if all_chart_data:
+                                # Generar gráfico de series temporales
+                                time_series_fig = create_matplotlib_chart(all_chart_data, "time_series")
+                                if time_series_fig:
+                                    st.subheader("📈 Series Temporales")
+                                    st.pyplot(time_series_fig)
+                                    charts_generated.append(time_series_fig)
                                 
-                                try:
-                                    st.image(chart_path, caption=chart_name, use_column_width=True)
-                                except Exception as img_error:
-                                    st.error(f"Error mostrando {chart_name}: {img_error}")
-                                    
-                    except Exception as chart_error:
-                        # No mostrar error si no hay gráficos, es normal
-                        if "grafica" in prompt.lower() or "gráfico" in prompt.lower():
-                            st.warning(f"No se encontraron gráficos recientes: {chart_error}")
+                                # Generar gráfico de estadísticas  
+                                stats_fig = create_matplotlib_chart(all_chart_data, "statistics")
+                                if stats_fig:
+                                    st.subheader("📊 Estadísticas")
+                                    st.pyplot(stats_fig)
+                                    charts_generated.append(stats_fig)
+                                
+                                if charts_generated:
+                                    st.success(f"✅ Generados {len(charts_generated)} gráficos")
+                                else:
+                                    st.warning("⚠️ No se pudieron generar gráficos")
+                            else:
+                                st.warning("⚠️ No hay datos suficientes para generar gráficos")
+                                
+                        except Exception as chart_error:
+                            st.error(f"❌ Error generando gráficos: {chart_error}")
                     
                     # Agregar al historial
-                    st.session_state.messages.append({"role": "assistant", "content": response})
+                    st.session_state.messages.append({
+                        "role": "assistant", 
+                        "content": response,
+                        "charts": charts_generated
+                    })
                     
                 except Exception as e:
-                    error_msg = f"❌ Error procesando consulta: {str(e)}"
+                    modules = load_project_modules()
+                    error_msg = f"❌ Error: {str(e)}"
                     st.error(error_msg)
-                    st.code(traceback.format_exc())
+                    if modules and 'traceback' in modules:
+                        st.code(modules['traceback'].format_exc())
                     st.session_state.messages.append({"role": "assistant", "content": error_msg})
 
-def display_debug_info():
-    """Panel de información de debug"""
-    st.sidebar.header("🔧 Información de Debug")
+def display_reports_interface():
+    """Interfaz de generación de reportes - RESTAURADA COMPLETAMENTE"""
+    st.title("📊 Generador de Reportes IoT")
+    
+    # Cargar servicios
+    cloud_agent, jetson_connector, report_generator = initialize_services()
+    modules = load_project_modules()
+    
+    if not report_generator or not modules:
+        st.error("❌ Servicios de reportes no disponibles")
+        return
+    
+    # Configuración del reporte
+    st.subheader("⚙️ Configuración del Reporte")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Selección de dispositivos
+        try:
+            devices = jetson_connector.get_devices()
+            device_options = [d.get('device_id', 'N/A') for d in devices]
+            selected_devices = st.multiselect(
+                "📱 Seleccionar Dispositivos:",
+                device_options,
+                default=device_options
+            )
+        except:
+            st.error("Error obteniendo dispositivos")
+            selected_devices = []
+    
+    with col2:
+        # Rango de tiempo
+        date_range = st.selectbox(
+            "📅 Rango de Tiempo:",
+            ["Última hora", "Últimas 6 horas", "Últimas 24 horas", "Últimos 7 días"]
+        )
+    
+    # Tipo de reporte
+    report_type = st.selectbox(
+        "📄 Tipo de Reporte:",
+        ["Resumen Ejecutivo", "Análisis Técnico Completo", "Reporte de Tendencias"]
+    )
+    
+    # Generar reporte
+    if st.button("🚀 Generar Reporte", type="primary"):
+        if selected_devices:
+            with st.spinner("📝 Generando reporte..."):
+                try:
+                    # Configurar parámetros del reporte
+                    hours_map = {
+                        "Última hora": 1,
+                        "Últimas 6 horas": 6, 
+                        "Últimas 24 horas": 24,
+                        "Últimos 7 días": 168
+                    }
+                    
+                    hours = hours_map.get(date_range, 24)
+                    
+                    # Generar reporte usando el generador
+                    report_result = report_generator.generate_comprehensive_report(
+                        device_ids=selected_devices,
+                        hours_back=hours,
+                        report_type=report_type.lower().replace(" ", "_")
+                    )
+                    
+                    if report_result and "success" in report_result:
+                        st.success("✅ Reporte generado exitosamente!")
+                        
+                        # Mostrar reporte
+                        if "report_content" in report_result:
+                            st.markdown("### 📋 Contenido del Reporte")
+                            st.markdown(report_result["report_content"])
+                        
+                        # Mostrar archivos generados
+                        if "files_generated" in report_result:
+                            st.markdown("### 📁 Archivos Generados")
+                            for file_info in report_result["files_generated"]:
+                                st.write(f"- **{file_info['type']}**: {file_info['filename']}")
+                        
+                        # Botón de descarga si está disponible
+                        if "download_url" in report_result:
+                            st.download_button(
+                                "📥 Descargar Reporte PDF",
+                                data=report_result.get("pdf_content", ""),
+                                file_name=f"reporte_iot_{modules['datetime'].now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                                mime="application/pdf"
+                            )
+                    else:
+                        st.error("❌ Error generando reporte")
+                        if "error" in report_result:
+                            st.error(report_result["error"])
+                
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+                    if modules and 'traceback' in modules:
+                        st.code(modules['traceback'].format_exc())
+        else:
+            st.warning("⚠️ Seleccione al menos un dispositivo")
+
+def display_system_status():
+    """Panel de estado del sistema optimizado"""
+    st.title("⚙️ Estado del Sistema")
+    
+    cloud_agent, jetson_connector, _ = initialize_services()
+    modules = load_project_modules()
+    
+    if not jetson_connector or not modules:
+        st.error("❌ Servicios no disponibles")
+        return
+    
+    # Métricas del sistema
+    st.subheader("📊 Métricas del Sistema")
     
     try:
-        # Información de uso de API
-        current_model = "llama-3.1-70b-versatile"
-        usage_info = usage_tracker.get_usage_info(current_model)
-        
-        st.sidebar.write("**Uso de API Groq:**")
-        st.sidebar.write(f"- Requests: {usage_info.get('requests_used', 0)}/{usage_info.get('requests_limit', 0)}")
-        st.sidebar.write(f"- Tokens: {usage_info.get('tokens_used', 0)}/{usage_info.get('tokens_limit', 0)}")
-        
         # Información de conectividad
-        st.sidebar.write("**Conectividad:**")
-        st.sidebar.write(f"- API Jetson: {JETSON_API_URL}")
-        st.sidebar.write(f"- Groq API: {'✅' if GROQ_API_KEY else '❌'}")
+        col1, col2, col3, col4 = st.columns(4)
         
-        # Test de conectividad
-        if st.sidebar.button("🔄 Test Conectividad"):
-            with st.sidebar:
+        with col1:
+            st.metric("🌐 API Jetson", "✅ Conectada" if jetson_connector else "❌ Error")
+        
+        with col2:
+            groq_status = "✅ Configurada" if GROQ_API_KEY else "❌ Faltante"
+            st.metric("🤖 Groq API", groq_status)
+        
+        with col3:
+            devices = jetson_connector.get_devices()
+            st.metric("📱 Dispositivos", len(devices))
+        
+        with col4:
+            # Contar registros totales
+            total_records = 0
+            for device in devices:
                 try:
-                    connector = JetsonAPIConnector(JETSON_API_URL)
-                    devices = connector.get_devices()
-                    st.success(f"✅ API OK: {len(devices)} dispositivos")
-                    
-                    for device in devices:
-                        device_id = device.get('device_id')
-                        data = connector.get_sensor_data(device_id=device_id, limit=1)
-                        st.write(f"- {device_id}: {len(data) if data else 0} registros")
-                        
-                except Exception as e:
-                    st.error(f"❌ Error: {e}")
+                    data = jetson_connector.get_sensor_data(device_id=device.get('device_id'), limit=1000)
+                    total_records += len(data) if data else 0
+                except:
+                    pass
+            st.metric("📝 Registros Totales", total_records)
         
-        # Limpiar caché
-        if st.sidebar.button("🗑️ Limpiar Caché"):
-            st.cache_resource.clear()
-            st.sidebar.success("✅ Caché limpiado")
+        # Detalles de dispositivos
+        st.subheader("🔧 Detalles de Dispositivos")
+        
+        for device in devices:
+            device_id = device.get('device_id', 'N/A')
             
+            with st.expander(f"📱 {device_id}", expanded=False):
+                try:
+                    recent_data = jetson_connector.get_sensor_data(device_id=device_id, limit=10)
+                    
+                    if recent_data:
+                        # Convertir a DataFrame para análisis
+                        import pandas as pd
+                        df = pd.DataFrame(recent_data)
+                        
+                        # Información básica
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            st.metric("📊 Registros", len(df))
+                        
+                        with col2:
+                            sensors = df['sensor_type'].nunique()
+                            st.metric("🔬 Sensores", sensors)
+                        
+                        with col3:
+                            latest_time = df['timestamp'].max()
+                            st.metric("🕐 Última actualización", latest_time)
+                        
+                        # Tabla de datos recientes
+                        st.dataframe(
+                            df[['sensor_type', 'value', 'timestamp']].head(5),
+                            use_container_width=True
+                        )
+                    else:
+                        st.warning("Sin datos disponibles")
+                
+                except Exception as e:
+                    st.error(f"Error: {e}")
+    
     except Exception as e:
-        st.sidebar.error(f"Error en debug: {e}")
+        st.error(f"Error obteniendo estado del sistema: {e}")
+
+def display_sidebar():
+    """Sidebar con información optimizada"""
+    modules = load_project_modules()
+    if not modules:
+        return
+    
+    st.sidebar.header("🔧 Panel de Control")
+    
+    # Información de uso de API
+    try:
+        usage_info = modules['usage_tracker'].get_usage_info("llama-3.1-70b-versatile")
+        
+        st.sidebar.subheader("📊 Uso de API")
+        
+        # Métricas compactas
+        requests_used = usage_info.get('requests_used', 0)
+        requests_limit = usage_info.get('requests_limit', 0)
+        
+        if requests_limit > 0:
+            usage_percent = (requests_used / requests_limit) * 100
+            st.sidebar.progress(usage_percent / 100)
+            st.sidebar.write(f"**Requests**: {requests_used}/{requests_limit} ({usage_percent:.1f}%)")
+        
+        # Alertas de uso
+        modules['display_usage_alert'](usage_info)
+        
+    except Exception as e:
+        st.sidebar.error(f"Error en métricas: {e}")
+    
+    # Controles del sistema
+    st.sidebar.subheader("⚙️ Controles")
+    
+    if st.sidebar.button("🗑️ Limpiar Cache"):
+        st.cache_resource.clear()
+        st.sidebar.success("Cache limpiado")
+        st.rerun()
+    
+    if st.sidebar.button("🔄 Recargar Servicios"):
+        st.cache_resource.clear()
+        st.sidebar.success("Servicios recargados")
+        st.rerun()
 
 def main():
-    """Función principal"""
-    try:
-        # Crear pestañas
-        tab1, tab2 = st.tabs(["💬 Chat IoT", "📊 Estado del Sistema"])
-        
-        with tab1:
-            display_chat_interface()
-        
-        with tab2:
-            st.header("📊 Estado del Sistema")
-            
-            # Información de dispositivos
-            try:
-                connector = JetsonAPIConnector(JETSON_API_URL)
-                devices = connector.get_devices()
-                
-                st.subheader("📱 Dispositivos Conectados")
-                
-                for device in devices:
-                    device_id = device.get('device_id', 'N/A')
-                    
-                    with st.expander(f"🔧 {device_id}", expanded=True):
-                        # Datos recientes
-                        recent_data = connector.get_sensor_data(device_id=device_id, limit=10)
-                        
-                        if recent_data:
-                            st.write(f"**Registros recientes:** {len(recent_data)}")
-                            
-                            # Mostrar tabla
-                            import pandas as pd
-                            df = pd.DataFrame(recent_data)
-                            st.dataframe(df[['sensor_type', 'value', 'timestamp']].head(5))
-                            
-                            # Estadísticas
-                            sensors = df['sensor_type'].unique()
-                            st.write(f"**Sensores activos:** {', '.join(sensors)}")
-                            
-                            latest_timestamp = df['timestamp'].max()
-                            st.write(f"**Última actualización:** {latest_timestamp}")
-                        else:
-                            st.warning("Sin datos disponibles")
-            
-            except Exception as e:
-                st.error(f"Error obteniendo estado del sistema: {e}")
-                st.code(traceback.format_exc())
-        
-        # Panel lateral de debug
-        display_debug_info()
-        
-    except Exception as e:
-        st.error(f"Error en aplicación principal: {e}")
-        st.code(traceback.format_exc())
+    """Función principal optimizada"""
+    
+    # Verificar configuración básica
+    if not GROQ_API_KEY:
+        st.error("❌ Configure GROQ_API_KEY en Streamlit Cloud Secrets")
+        st.stop()
+    
+    # Crear pestañas COMPLETAS (sin eliminar funcionalidades)
+    tab1, tab2, tab3 = st.tabs([
+        "💬 Chat IoT", 
+        "📊 Reportes",  # RESTAURADA
+        "⚙️ Sistema"
+    ])
+    
+    with tab1:
+        display_chat_interface()
+    
+    with tab2:
+        display_reports_interface()  # FUNCIONALIDAD RESTAURADA
+    
+    with tab3:
+        display_system_status()
+    
+    # Sidebar
+    display_sidebar()
 
 if __name__ == "__main__":
     main()
