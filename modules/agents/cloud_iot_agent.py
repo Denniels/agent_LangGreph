@@ -236,10 +236,13 @@ class CloudIoTAgent:
             if devices_result:
                 all_data = []
                 
-                # Recolectar datos de cada dispositivo
-                for device in devices_result[:2]:  # Limitar a 2 dispositivos para cloud
+                # Recolectar datos de TODOS los dispositivos disponibles
+                logger.info(f"🔍 Procesando {len(devices_result)} dispositivos disponibles")
+                
+                for device in devices_result:  # SIN LÍMITES - procesar todos los dispositivos
                     device_id = device.get("device_id")
                     if device_id:
+                        logger.info(f"📡 Recolectando datos de {device_id}")
                         # Para consultas por tiempo, obtener más datos
                         # Para consultas generales, usar límite conservador
                         limit = 500  # Aumentar significativamente para asegurar datos temporales

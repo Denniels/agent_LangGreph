@@ -13,8 +13,6 @@ import streamlit as st
 import sys
 import os
 import uuid
-import glob
-import time
 from datetime import datetime, timedelta
 import traceback
 
@@ -138,44 +136,6 @@ def display_chat_interface():
                     
                     # Mostrar respuesta
                     st.markdown(response)
-                    
-                    # VERIFICAR Y MOSTRAR GRÁFICOS SI SE GENERARON
-                    try:
-                        # Buscar archivos de gráficos recientes
-                        import glob
-                        import time
-                        
-                        # Buscar en directorio charts/
-                        chart_patterns = [
-                            "charts/time_series_*.png",
-                            "charts/statistics_*.png", 
-                            "charts/prediction_*.png"
-                        ]
-                        
-                        charts_found = []
-                        for pattern in chart_patterns:
-                            files = glob.glob(pattern)
-                            # Filtrar archivos creados en los últimos 30 segundos
-                            recent_files = [f for f in files if time.time() - os.path.getmtime(f) < 30]
-                            charts_found.extend(recent_files)
-                        
-                        if charts_found:
-                            st.success(f"📊 **GRÁFICOS GENERADOS**: {len(charts_found)} archivos")
-                            
-                            # Mostrar cada gráfico
-                            for chart_path in sorted(charts_found):
-                                chart_name = os.path.basename(chart_path)
-                                st.subheader(f"📈 {chart_name}")
-                                
-                                try:
-                                    st.image(chart_path, caption=chart_name, use_column_width=True)
-                                except Exception as img_error:
-                                    st.error(f"Error mostrando {chart_name}: {img_error}")
-                                    
-                    except Exception as chart_error:
-                        # No mostrar error si no hay gráficos, es normal
-                        if "grafica" in prompt.lower() or "gráfico" in prompt.lower():
-                            st.warning(f"No se encontraron gráficos recientes: {chart_error}")
                     
                     # Agregar al historial
                     st.session_state.messages.append({"role": "assistant", "content": response})

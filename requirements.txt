@@ -1,31 +1,20 @@
-# Dependencias esenciales para Streamlit Cloud - UI completa
+# Dependencias ESENCIALES para Streamlit Cloud - OPTIMIZADO PARA VELOCIDAD
 streamlit>=1.35.0
 groq>=0.30.0
 requests>=2.31.0
 python-dotenv>=1.0.0
-nest-asyncio>=1.5.0
-loguru>=0.7.0
 
-# LangChain dependencies
+# LangChain dependencies MÍNIMAS
 langchain-core>=0.1.0
 langchain-groq>=0.1.0
 langgraph>=0.0.50
 pydantic>=2.0.0
-typing-extensions>=4.0.0
 
-# Adicionales para UI rica (sin conflictos)
-plotly>=5.0.0
+# Análisis de datos BÁSICO
 pandas>=2.0.0
 
-# Machine Learning para visualizaciones
-scikit-learn>=1.3.0
-
-# Dependencias para generación de reportes
-kaleido>=0.2.1
-reportlab>=4.0.0
-openpyxl>=3.1.0
-xlsxwriter>=3.1.0
+# Visualización LIGERA
 matplotlib>=3.6.0
 
-# Dependencias adicionales para kaleido en Streamlit Cloud
-psutil>=5.9.0
+# Machine Learning OPCIONAL (solo si se necesita)
+scikit-learn>=1.3.0
