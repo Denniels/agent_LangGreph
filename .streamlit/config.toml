@@ -1,19 +1,40 @@
-# Streamlit Cloud Configuration for Cloud IoT Agent
-# =================================================
-
-[global]
-dataFrameSerialization = "legacy"
+# Configuración OPTIMIZADA para Streamlit Cloud
+# ===============================================
 
 [server]
-port = 8501
+# Configuración del servidor para cloud
 headless = true
+enableCORS = false
+enableXsrfProtection = false
+port = 8501
 
 [browser]
+# No abrir navegador automáticamente en cloud
 gatherUsageStats = false
 
 [theme]
-primaryColor = "#667eea"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f0f2f6"
+# Tema optimizado
+primaryColor = "#FF6B6B"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
 textColor = "#262730"
 font = "sans serif"
+
+[runner]
+# Optimizaciones de rendimiento para cloud
+magicEnabled = true
+installTracer = false
+fixMatplotlib = true
+
+[client]
+# Configuración del cliente
+showErrorDetails = true
+toolbarMode = "minimal"
+
+[global]
+# Configuraciones globales optimizadas para cloud
+developmentMode = false
+logLevel = "info"
+
+# Sin configuraciones obsoletas que causan warnings
+# (removido dataFrameSerialization que ya no es válido)

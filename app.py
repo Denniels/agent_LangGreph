@@ -1,27 +1,34 @@
 """
-Remote IoT Agent - Aplicación Principal para Streamlit Cloud
-==========================================================
+🤖 AGENTE IoT REMOTO - STREAMLIT CLOUD OPTIMIZED
+===============================================
 
-Punto de entrada principal para el despliegue en Streamlit Cloud.
-Usa Groq API (100% gratuito) para análisis inteligente de datos IoT.
+Punto de entrada PRINCIPAL para Streamlit Cloud.
+✅ Gráficos matplotlib nativos
+✅ Reportes completos  
+✅ Chat IoT inteligente
+✅ 100% compatible con Streamlit Cloud
+
+🚀 GROQ API (GRATIS) + LangGraph + Jetson Nano Remoto
 """
 
-# Configurar el entorno antes de cualquier import
+# Configuración CRÍTICA para Streamlit Cloud
 import os
 import sys
 
-# Configurar path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# ASEGURAR PATH CORRECTO para imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 
-# Configurar variables de entorno para cloud
+# VARIABLES DE ENTORNO para Streamlit Cloud
 if not os.getenv('GROQ_API_KEY'):
-    # En Streamlit Cloud, se configura en Secrets
-    pass
+    # En Streamlit Cloud debe configurarse en Secrets
+    print("⚠️ GROQ_API_KEY debe configurarse en Streamlit Cloud Secrets")
 
 if not os.getenv('JETSON_API_URL'):
     os.environ['JETSON_API_URL'] = 'https://couples-mario-repository-alive.trycloudflare.com'
 
-# Ejecutar la aplicación original con UI completa
+# EJECUTAR APLICACIÓN PRINCIPAL
 if __name__ == "__main__":
-    # Importar y ejecutar la app cloud con UI original
+    # Ejecutar app optimizada desde streamlit_app
     exec(open('streamlit_app/app_groq_cloud.py').read())
