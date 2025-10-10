@@ -152,7 +152,7 @@ class StreamlitCloudApp:
                 st.info("Configura tu token de HuggingFace en Streamlit Cloud Secrets")
             
             # Jetson URL
-            jetson_url = os.getenv("JETSON_API_URL", "https://dependent-discussions-venice-filling.trycloudflare.com")
+            jetson_url = os.getenv("JETSON_API_URL", "https://respect-craps-lit-aged.trycloudflare.com")
             st.info(f"🔗 Jetson API: {jetson_url}")
             
             # Modelo de HuggingFace
@@ -531,7 +531,7 @@ class StreamlitCloudApp:
         # Configuración de conexión
         st.subheader("🔗 Configuración de Conexión")
         
-        jetson_url = os.getenv("JETSON_API_URL", "https://dpi-opportunity-hybrid-manufacturer.trycloudflare.com")
+        jetson_url = os.getenv("JETSON_API_URL", "https://respect-craps-lit-aged.trycloudflare.com")
         
         col1, col2 = st.columns(2)
         
