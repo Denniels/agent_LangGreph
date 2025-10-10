@@ -699,136 +699,86 @@ def display_sidebar():
 
 def display_professional_banner():
     """
-    Mostrar banner profesional con información del sistema IoT
+    Banner profesional usando componentes nativos de Streamlit
     """
     
-    # CSS personalizado para el banner
+    # Encabezado principal con estado
+    st.markdown("## 🏭 Sistema IoT Industrial - Monitoreo con IA")
+    st.markdown("🟢 **Estado:** Sistema Operativo | 📡 **Conectividad:** API Activa | ⏰ **Actualización:** Tiempo Real")
+    
+    # Descripción principal
+    st.info("""
+    **Sistema avanzado de monitoreo IoT** ejecutándose en **NVIDIA Jetson Nano** con 
+    capacidades de IA integradas para análisis inteligente de sensores industriales.
+    """)
+    
+    # Métricas principales en columnas
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            label="📊 Análisis Temporal",
+            value="1h - 7 días",
+            delta="Paginación automática"
+        )
+    
+    with col2:
+        st.metric(
+            label="🤖 IA Integrada", 
+            value="Groq LLM",
+            delta="Análisis predictivo"
+        )
+    
+    with col3:
+        st.metric(
+            label="🔍 Sensores Activos",
+            value="6 tipos",
+            delta="Multi-dispositivo"
+        )
+    
+    with col4:
+        st.metric(
+            label="🖥️ Hardware",
+            value="Jetson Nano",
+            delta="4GB RAM"
+        )
+    
+    # Capacidades en expander
+    with st.expander("📋 Capacidades del Sistema IoT", expanded=False):
+        cap_col1, cap_col2 = st.columns(2)
+        
+        with cap_col1:
+            st.markdown("""
+            **🔍 Análisis Temporal:**
+            - ⚡ **1-6 horas:** Respuesta inmediata (hasta 200 registros)
+            - 📚 **6+ horas:** Paginación automática (hasta 2,000 registros)
+            - 🎯 **IA:** Análisis automático de tendencias y patrones
+            
+            **💬 Chat Inteligente:**
+            - 🤖 **Groq LLM:** Conversación natural sobre datos
+            - 📈 **Predictivo:** Análisis automático de tendencias
+            - 🗣️ **Explicativo:** Recomendaciones claras y actionables
+            """)
+        
+        with cap_col2:
+            st.markdown("""
+            **📊 Sensores Monitoreados:**
+            - 🌡️ **Temperatura:** 3 tipos (promedio, entrada, salida)
+            - 💡 **Luminosidad:** Sensores LDR ambientales
+            - ⚙️ **Industriales:** Sensores NTC especializados
+            
+            **🚀 Optimización Jetson:**
+            - 📊 **Adaptativo:** Método automático según duración
+            - 📈 **Escalable:** Capacidad variable según necesidad
+            - ⚡ **Eficiente:** Respuesta optimizada para hardware edge
+            """)
+    
+    # Información técnica resumida
     st.markdown("""
-    <style>
-    .professional-banner {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 25px;
-        color: white;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
+    **🔧 Stack:** Jetson Nano 4GB | Groq API (Gratuita) | FastAPI + SQLite | Streamlit Cloud | LangGraph IA
+    """)
     
-    .banner-header {
-        font-size: 24px;
-        font-weight: bold;
-        margin-bottom: 15px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
-    .banner-content {
-        font-size: 16px;
-        line-height: 1.6;
-        margin-bottom: 15px;
-    }
-    
-    .capabilities-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 15px;
-        margin: 15px 0;
-    }
-    
-    .capability-item {
-        background: rgba(255,255,255,0.1);
-        padding: 15px;
-        border-radius: 8px;
-        border-left: 4px solid #4CAF50;
-    }
-    
-    .limitation-item {
-        background: rgba(255,255,255,0.1);
-        padding: 15px;
-        border-radius: 8px;
-        border-left: 4px solid #FF9800;
-    }
-    
-    .tech-specs {
-        background: rgba(255,255,255,0.08);
-        padding: 15px;
-        border-radius: 8px;
-        margin-top: 15px;
-        font-size: 14px;
-    }
-    
-    .status-indicator {
-        display: inline-block;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        margin-right: 8px;
-    }
-    
-    .status-active {
-        background-color: #4CAF50;
-        animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.5; }
-        100% { opacity: 1; }
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # Banner principal
-    st.markdown(f"""
-    <div class="professional-banner">
-        <div class="banner-header">
-            <span class="status-indicator status-active"></span>
-            🏭 Sistema IoT Industrial - Monitoreo con IA
-        </div>
-        
-        <div class="banner-content">
-            Sistema avanzado de monitoreo IoT ejecutándose en <strong>NVIDIA Jetson Nano</strong> con 
-            capacidades de IA integradas para análisis inteligente de sensores industriales.
-        </div>
-        
-        <div class="capabilities-grid">
-            <div class="capability-item">
-                <strong>📊 Análisis Temporal Avanzado</strong><br>
-                • Datos en tiempo real (1-6 horas)<br>
-                • Análisis histórico con paginación (hasta 1 semana)<br>
-                • Tendencias automáticas con IA
-            </div>
-            
-            <div class="capability-item">
-                <strong>🤖 IA Conversacional</strong><br>
-                • Chat inteligente con Groq LLM<br>
-                • Análisis predictivo automático<br>
-                • Recomendaciones en lenguaje natural
-            </div>
-            
-            <div class="capability-item">
-                <strong>🔍 Monitoreo Multi-Sensor</strong><br>
-                • Temperatura (3 tipos)<br>
-                • Luminosidad (LDR)<br>
-                • Sensores NTC industriales
-            </div>
-            
-            <div class="limitation-item">
-                <strong>⚙️ Optimizado para Jetson Nano</strong><br>
-                • Consultas extensas usan paginación inteligente<br>
-                • Hasta 2,000 registros por análisis<br>
-                • Hardware embebido de alto rendimiento
-            </div>
-        </div>
-        
-        <div class="tech-specs">
-            <strong>🔧 Stack Tecnológico:</strong>
-            Jetson Nano 4GB | Groq API (Gratuita) | FastAPI + SQLite | Streamlit Cloud | 
-            LangGraph para IA conversacional
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("---")
 
 def main():
     """Función principal optimizada con banner profesional"""
