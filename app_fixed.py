@@ -1,9 +1,9 @@
 """
-🤖 AGENTE IoT REMOTO - STREAMLIT CLOUD FIXED
-==========================================
+🤖 AGENTE IoT REMOTO - STREAMLIT CLOUD OPTIMIZED - VERSION CORREGIDA
+=================================================================
 
 Punto de entrada PRINCIPAL para Streamlit Cloud.
-Versión corregida sin errores de indentación.
+Versión limpia sin errores de indentación.
 """
 
 # Configuración CRÍTICA para Streamlit Cloud
@@ -25,9 +25,12 @@ if not os.getenv('JETSON_API_URL'):
 # EJECUTAR APLICACIÓN PRINCIPAL
 if __name__ == "__main__":
     try:
-        # Usar app simplificada y corregida
-        exec(open('streamlit_app/app_simple_fixed.py').read())
+        # Ejecutar app optimizada desde streamlit_app
+        with open('streamlit_app/app_groq_cloud.py', 'r', encoding='utf-8') as f:
+            app_code = f.read()
+        exec(app_code)
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error ejecutando app principal: {e}")
+        # Fallback simple
         import streamlit as st
-        st.error("Error de carga. Contacte al administrador.")
+        st.error("Error de carga. Verifique la configuración.")
