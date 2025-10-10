@@ -15,6 +15,7 @@ import streamlit as st
 # Imports del proyecto
 from modules.agents.groq_integration import GroqIntegration
 from modules.tools.jetson_api_connector import JetsonAPIConnector
+from modules.tools.direct_jetson_connector import DirectJetsonConnector
 from modules.agents.direct_api_agent import create_direct_api_agent
 from modules.agents.langgraph_state import IoTAgentState, create_initial_state
 from modules.utils.usage_tracker import usage_tracker
@@ -108,10 +109,15 @@ class CloudIoTAgent:
                 # Usar Groq real
                 self.groq_integration = GroqIntegration(api_key=groq_api_key)
             
-            # 2. Inicializar Jetson API Connector
+            # 2. Inicializar conectores con prioridad
+            # PRIORIDAD 1: Conector directo (igual que dashboard exitoso)
+            self.direct_connector = DirectJetsonConnector(self.jetson_api_url)
+            logger.info("✅ DirectJetsonConnector inicializado")
+            
+            # PRIORIDAD 2: Conector tradicional (fallback)
             self.jetson_connector = JetsonAPIConnector(base_url=self.jetson_api_url)
             
-            # 3. Inicializar Direct API Agent (fallback robusto)
+            # PRIORIDAD 3: Agente directo (último fallback)
             self.direct_api_agent = create_direct_api_agent(self.jetson_api_url)
             
             # 4. Probar conexiones
@@ -236,18 +242,40 @@ class CloudIoTAgent:
             Estado actualizado
         """
         try:
-            logger.info("📡 Ejecutando remote_data_collector_node (ROBUSTO)")
+            logger.info("📡 Ejecutando remote_data_collector_node (ULTRA-ROBUSTO)")
             
-            # MÉTODO 1: Intentar conexión normal primero
             all_data = []
-            method_used = "normal"
+            method_used = "none"
             
-            if self.jetson_connector:
+            # MÉTODO 1: Conector DIRECTO (igual que dashboard exitoso)
+            if self.direct_connector:
                 try:
-                    logger.info("� Intentando método normal...")
+                    logger.info("🚀 Intentando método DIRECTO (igual que dashboard)...")
+                    
+                    # Usar el método completo que replica el dashboard
+                    result = self.direct_connector.get_all_data_simple()
+                    
+                    if result["status"] == "success" and result["sensor_data"]:
+                        all_data = result["sensor_data"]
+                        method_used = "direct"
+                        logger.info(f"✅ Método DIRECTO exitoso: {len(all_data)} registros")
+                        logger.info(f"📊 Stats: {result['stats']}")
+                        
+                        # Guardar información detallada
+                        state["connection_info"] = result["connection"]
+                        state["device_info"] = result["devices"]
+                        state["data_stats"] = result["stats"]
+                        
+                except Exception as e:
+                    logger.warning(f"⚠️ Método DIRECTO falló: {e}")
+            
+            # MÉTODO 2: Método tradicional (solo si el directo falla)
+            if not all_data and self.jetson_connector:
+                try:
+                    logger.info("🔄 Intentando método tradicional...")
                     devices_result = self.jetson_connector.get_devices()
                     
-                    if devices_result:
+                    if devices_result and not any(d.get("status") == "unknown" for d in devices_result):
                         for device in devices_result:
                             device_id = device.get("device_id")
                             if device_id:
@@ -259,7 +287,8 @@ class CloudIoTAgent:
                                     all_data.extend(device_data)
                         
                         if all_data:
-                            logger.info(f"✅ Método normal exitoso: {len(all_data)} registros")
+                            method_used = "traditional"
+                            logger.info(f"✅ Método tradicional exitoso: {len(all_data)} registros")
                         else:
                             raise Exception("Método normal no devolvió datos")
                     else:

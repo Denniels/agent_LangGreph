@@ -115,11 +115,8 @@ class JetsonAPIConnector:
             
         except Exception as e:
             logger.error(f"❌ Error obteniendo dispositivos: {e}")
-            # Devolver estructura por defecto para evitar crashes
-            return [
-                {"device_id": "esp32_wifi_001", "status": "unknown", "last_seen": "unknown"},
-                {"device_id": "arduino_eth_001", "status": "unknown", "last_seen": "unknown"}
-            ]
+            # EN LUGAR DE DEVOLVER DATOS DUMMY, LANZAR EXCEPCIÓN
+            raise Exception(f"No se pudo conectar a la API de Jetson: {str(e)}")
     
     def get_sensor_data(self, device_id: str = None, sensor_type: str = None, 
                        limit: int = 100, hours: float = None) -> List[Dict[str, Any]]:
