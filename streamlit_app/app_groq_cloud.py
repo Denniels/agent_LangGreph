@@ -17,6 +17,10 @@ APLICACIÓN STREAMLIT COMPLETA Y OPTIMIZADA - VERSIÓN DEFINITIVA
 import streamlit as st
 import os
 
+# Configurar matplotlib antes de otros imports
+import matplotlib
+matplotlib.use('Agg')  # Backend no interactivo para evitar problemas de DOM
+
 # Configuración MÍNIMA
 st.set_page_config(
     page_title="🤖 Agente IoT Completo",
@@ -130,51 +134,43 @@ def initialize_services():
         return None, None, None
 
 def create_matplotlib_chart(data, query_type="time_series"):
-    """Crear gráficos matplotlib directamente en Streamlit - Versión Robusta"""
+    """Crear gráficos matplotlib directamente en Streamlit - Versión Compatible"""
     if not data:
-        st.warning("📊 No hay datos disponibles para gráficos")
         return None
     
     try:
         import matplotlib.pyplot as plt
         import pandas as pd
-        import numpy as np
-        from datetime import datetime
+        import matplotlib
         
-        # Configurar matplotlib para Streamlit
-        plt.style.use('default')
+        # Configurar matplotlib para evitar problemas de GUI
+        matplotlib.use('Agg')  # Backend no interactivo
+        plt.ioff()  # Desactivar modo interactivo
         
         # Convertir datos a DataFrame
         df = pd.DataFrame(data)
         
-        # Validar que tenemos las columnas necesarias
-        required_columns = ['timestamp', 'device_id', 'sensor_type', 'value']
-        if not all(col in df.columns for col in required_columns):
-            st.error(f"❌ Faltan columnas requeridas. Disponibles: {list(df.columns)}")
+        # Validar columnas
+        if not all(col in df.columns for col in ['timestamp', 'device_id', 'sensor_type', 'value']):
             return None
         
-        # Limpiar y convertir datos
+        # Limpiar datos
         df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
         df['value'] = pd.to_numeric(df['value'], errors='coerce')
-        
-        # Eliminar filas con datos inválidos
         df = df.dropna(subset=['timestamp', 'value'])
         
         if df.empty:
-            st.warning("📊 No hay datos válidos después de limpieza")
             return None
         
-        st.info(f"📊 Procesando {len(df)} registros para gráfico {query_type}")
-        
         if query_type == "time_series":
-            # Gráfico de series temporales mejorado
-            fig, ax = plt.subplots(figsize=(14, 8))
+            # Gráfico simple de series temporales
+            fig, ax = plt.subplots(figsize=(12, 6))
             
-            # Colores predefinidos para mejor visualización
-            colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']
+            # Colores simples
+            colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown']
             color_idx = 0
             
-            # Agrupar por dispositivo y sensor
+            # Plotear por dispositivo y sensor
             for device_id in df['device_id'].unique():
                 device_data = df[df['device_id'] == device_id]
                 
@@ -182,76 +178,47 @@ def create_matplotlib_chart(data, query_type="time_series"):
                     sensor_data = device_data[device_data['sensor_type'] == sensor_type]
                     
                     if len(sensor_data) > 0:
-                        # Ordenar por timestamp
                         sensor_data = sensor_data.sort_values('timestamp')
-                        
-                        label = f"{device_id} - {sensor_type}"
-                        color = colors[color_idx % len(colors)]
+                        label = f"{device_id}-{sensor_type}"
                         
                         ax.plot(sensor_data['timestamp'], sensor_data['value'], 
-                               marker='o', label=label, linewidth=2.5, 
-                               markersize=5, color=color, alpha=0.8)
+                               marker='o', label=label, 
+                               color=colors[color_idx % len(colors)])
                         
                         color_idx += 1
             
-            ax.set_title("📈 Evolución Temporal de Sensores IoT", fontsize=16, fontweight='bold', pad=20)
-            ax.set_xlabel("Tiempo", fontsize=12)
-            ax.set_ylabel("Valor del Sensor", fontsize=12)
-            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            ax.set_title("Evolución Temporal de Sensores")
+            ax.set_xlabel("Tiempo")
+            ax.set_ylabel("Valor")
+            ax.legend()
             ax.grid(True, alpha=0.3)
             
-            # Rotar etiquetas de tiempo para mejor legibilidad
             plt.xticks(rotation=45)
             plt.tight_layout()
             
             return fig
             
         elif query_type == "statistics":
-            # Gráfico de estadísticas por sensor
-            fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-            fig.suptitle("📊 Estadísticas por Tipo de Sensor", fontsize=16, fontweight='bold')
+            # Gráfico simple de estadísticas
+            fig, ax = plt.subplots(figsize=(10, 6))
             
-            # Estadísticas por sensor
-            sensor_stats = df.groupby(['device_id', 'sensor_type'])['value'].agg(['mean', 'min', 'max', 'std']).reset_index()
+            # Promedios por sensor
+            sensor_avg = df.groupby(['device_id', 'sensor_type'])['value'].mean().unstack(fill_value=0)
             
-            # Gráfico 1: Temperaturas promedio
-            temp_data = df[df['sensor_type'].str.contains('temperature', case=False, na=False)]
-            if not temp_data.empty:
-                temp_stats = temp_data.groupby(['device_id', 'sensor_type'])['value'].mean().unstack(fill_value=0)
-                temp_stats.plot(kind='bar', ax=axes[0,0], color=['#FF6B6B', '#FF8E8E', '#FFAAAA'])
-                axes[0,0].set_title("🌡️ Temperaturas Promedio")
-                axes[0,0].set_ylabel("Temperatura (°C)")
-                axes[0,0].legend(rotation=45)
+            sensor_avg.plot(kind='bar', ax=ax, color=['red', 'blue', 'green', 'orange'])
+            ax.set_title("Promedios por Sensor")
+            ax.set_ylabel("Valor Promedio")
+            ax.legend()
             
-            # Gráfico 2: Luminosidad
-            ldr_data = df[df['sensor_type'] == 'ldr']
-            if not ldr_data.empty:
-                ldr_stats = ldr_data.groupby('device_id')['value'].mean()
-                ldr_stats.plot(kind='bar', ax=axes[0,1], color='#FFEAA7')
-                axes[0,1].set_title("💡 Luminosidad Promedio")
-                axes[0,1].set_ylabel("Luminosidad")
-            
-            # Gráfico 3: Distribución de valores
-            df.boxplot(column='value', by='sensor_type', ax=axes[1,0])
-            axes[1,0].set_title("📦 Distribución por Sensor")
-            axes[1,0].set_ylabel("Valor")
-            
-            # Gráfico 4: Conteo por dispositivo
-            device_counts = df.groupby('device_id').size()
-            device_counts.plot(kind='pie', ax=axes[1,1], autopct='%1.1f%%', colors=['#4ECDC4', '#45B7D1'])
-            axes[1,1].set_title("📊 Registros por Dispositivo")
-            
+            plt.xticks(rotation=45)
             plt.tight_layout()
+            
             return fig
         
-        else:
-            st.warning(f"⚠️ Tipo de gráfico '{query_type}' no soportado")
-            return None
+        return None
             
     except Exception as e:
-        st.error(f"❌ Error creando gráfico: {str(e)}")
-        import traceback
-        st.code(traceback.format_exc())
+        # Retornar None en lugar de mostrar error para evitar problemas de DOM
         return None
             
             # Rotar etiquetas de fecha
@@ -502,24 +469,17 @@ def display_chat_interface():
                                             all_chart_data.extend(device_data)
                             
                             if all_chart_data:
-                                # Generar gráfico de series temporales
-                                time_series_fig = create_matplotlib_chart(all_chart_data, "time_series")
-                                if time_series_fig:
-                                    st.subheader("📈 Series Temporales")
-                                    st.pyplot(time_series_fig)
-                                    charts_generated.append(time_series_fig)
+                                st.info("📊 Generando visualizaciones...")
                                 
-                                # Generar gráfico de estadísticas  
-                                stats_fig = create_matplotlib_chart(all_chart_data, "statistics")
-                                if stats_fig:
-                                    st.subheader("📊 Estadísticas")
-                                    st.pyplot(stats_fig)
-                                    charts_generated.append(stats_fig)
-                                
-                                if charts_generated:
-                                    st.success(f"✅ Generados {len(charts_generated)} gráficos")
+                                # Generar solo un gráfico para evitar problemas de DOM
+                                chart_fig = create_matplotlib_chart(all_chart_data, "time_series")
+                                if chart_fig:
+                                    st.subheader("� Visualización de Datos")
+                                    st.pyplot(chart_fig, clear_figure=True)
+                                    charts_generated.append(chart_fig)
+                                    st.success("✅ Gráfico generado exitosamente")
                                 else:
-                                    st.warning("⚠️ No se pudieron generar gráficos")
+                                    st.warning("⚠️ No se pudo generar el gráfico")
                             else:
                                 st.warning("⚠️ No hay datos suficientes para generar gráficos")
                                 
