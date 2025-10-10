@@ -58,7 +58,16 @@ def test_agent_connectivity():
             try:
                 response = await agent.process_query("lista los dispositivos disponibles")
                 print("✅ Consulta procesada correctamente")
-                print(f"Respuesta (primeros 200 chars): {response[:200]}...")
+                
+                # Manejar si la respuesta es un diccionario o string
+                if isinstance(response, dict):
+                    response_text = str(response)
+                    print(f"Respuesta (dict): {response_text[:200]}...")
+                elif isinstance(response, str):
+                    print(f"Respuesta (string): {response[:200]}...")
+                else:
+                    print(f"Respuesta (tipo {type(response)}): {str(response)[:200]}...")
+                    
             except Exception as e:
                 print(f"❌ Error procesando consulta: {e}")
                 import traceback

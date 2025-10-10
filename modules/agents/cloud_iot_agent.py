@@ -396,7 +396,7 @@ La API de la Jetson no está respondiendo. Por favor:
                 state["analysis"] = {"error": "no_data_available"}
                 return state
             
-            # Análisis optimizado para cloud
+            # Análisis optimizado para cloud - CON VALIDACIÓN ROBUSTA
             analysis = {
                 "total_records": len(raw_data),
                 "devices": set(),
@@ -404,6 +404,55 @@ La API de la Jetson no está respondiendo. Por favor:
                 "latest_readings": {},
                 "timestamp_range": {"start": None, "end": None}
             }
+            
+            # 🔧 VALIDACIÓN Y SANITIZACIÓN DE DATOS
+            processed_data = []
+            for item in raw_data:
+                try:
+                    # Verificar que sea un diccionario
+                    if isinstance(item, dict):
+                        # Verificar que tenga los campos mínimos requeridos
+                        if all(key in item for key in ['device_id', 'sensor_type', 'value']):
+                            processed_data.append(item)
+                        else:
+                            logger.warning(f"⚠️ Registro incompleto: {item}")
+                    elif isinstance(item, str):
+                        # Intentar parsear como JSON si es string
+                        import json
+                        try:
+                            parsed_item = json.loads(item)
+                            if isinstance(parsed_item, dict) and all(key in parsed_item for key in ['device_id', 'sensor_type', 'value']):
+                                processed_data.append(parsed_item)
+                            else:
+                                logger.warning(f"⚠️ String JSON inválido: {item[:100]}...")
+                        except json.JSONDecodeError:
+                            logger.warning(f"⚠️ String no es JSON válido: {item[:100]}...")
+                    else:
+                        logger.warning(f"⚠️ Tipo de dato inesperado: {type(item)} - {str(item)[:100]}")
+                except Exception as e:
+                    logger.warning(f"⚠️ Error procesando item: {e}")
+            
+            logger.info(f"🔍 Datos sanitizados: {len(processed_data)}/{len(raw_data)} registros válidos")
+            
+            # Si no hay datos válidos después de la sanitización
+            if not processed_data:
+                logger.warning("🚨 No hay datos válidos después de la sanitización")
+                state["formatted_data"] = """
+🚨 ERROR: Los datos obtenidos tienen formato incorrecto
+
+Los datos de la API están llegando pero no tienen el formato esperado.
+
+📋 DATOS RECIBIDOS:
+""" + str(raw_data[:3]) + """
+
+🔧 POSIBLES SOLUCIONES:
+📡 Verificar formato de respuesta de la API Jetson
+🔄 Reiniciar servicios de la API: sudo systemctl restart iot-api-service
+🌐 Verificar que la API retorne JSON válido
+"""
+                state["sensor_summary"] = {}
+                state["analysis"] = {"error": "invalid_data_format"}
+                return state
             
             # Detectar tipos de consultas específicas
             user_query = state.get("user_query", "").lower()
@@ -462,12 +511,13 @@ La API de la Jetson no está respondiendo. Por favor:
                 logger.info(f"   ⏰ Filtrando datos desde: {time_limit.strftime('%H:%M:%S')}")
                 
                 # Filtrar datos por tiempo para TODOS los dispositivos
-                processed_data = []
-                devices_found = set(record.get("device_id") for record in raw_data)
+                # USAR DATOS SANITIZADOS como base
+                time_filtered_data = []
+                devices_found = set(record.get("device_id") for record in processed_data)
                 total_in_timeframe = 0
                 
                 for device_id in devices_found:
-                    device_records = [r for r in raw_data if r.get("device_id") == device_id]
+                    device_records = [r for r in processed_data if r.get("device_id") == device_id]
                     device_time_filtered = []
                     
                     for record in device_records:
@@ -493,48 +543,65 @@ La API de la Jetson no está respondiendo. Por favor:
                             # Si no se puede parsear, incluir el registro (mejor incluir que excluir)
                             device_time_filtered.append(record)
                     
-                    processed_data.extend(device_time_filtered)
+                    time_filtered_data.extend(device_time_filtered)
                     total_in_timeframe += len(device_time_filtered)
                     logger.info(f"   📱 {device_id}: {len(device_time_filtered)} registros en últimos {time_value} {time_unit}")
                 
+                # Actualizar processed_data con los datos filtrados por tiempo
+                processed_data = time_filtered_data
                 logger.info(f"   📊 Procesando {len(processed_data)} registros por TIEMPO ({len(devices_found)} dispositivos)")
                 
             elif request_specific_count and request_per_device:
                 # Para consultas de "X registros por dispositivo", distribuir equitativamente
-                processed_data = []
-                devices_found = set(record.get("device_id") for record in raw_data)
+                # USAR DATOS SANITIZADOS como base
+                per_device_data = []
+                devices_found = set(record.get("device_id") for record in processed_data)
                 
                 for device_id in devices_found:
-                    device_records = [r for r in raw_data if r.get("device_id") == device_id]
+                    device_records = [r for r in processed_data if r.get("device_id") == device_id]
                     device_limited = device_records[:requested_count]
-                    processed_data.extend(device_limited)
+                    per_device_data.extend(device_limited)
                     logger.info(f"   📱 {device_id}: {len(device_limited)} registros incluidos")
                 
+                # Actualizar processed_data con los datos filtrados por dispositivo
+                processed_data = per_device_data
                 logger.info(f"   📊 Procesando {len(processed_data)} registros específicos ({len(devices_found)} dispositivos)")
             elif request_specific_count:
                 # Para consultas específicas totales, tomar exactamente la cantidad solicitada
-                processed_data = raw_data[:requested_count]
+                # USAR DATOS SANITIZADOS, no raw_data
+                processed_data = processed_data[:requested_count]
                 logger.info(f"   📊 Procesando {len(processed_data)} registros específicos TOTAL")
             else:
-                # Para análisis general, limitar a 50 registros para cloud
-                processed_data = raw_data[:50] if len(raw_data) > 50 else raw_data
+                # Para análisis general, limitar a 50 registros para cloud  
+                # USAR DATOS SANITIZADOS, no raw_data
+                processed_data = processed_data[:50] if len(processed_data) > 50 else processed_data
             
+            # Usar los datos sanitizados para el análisis final
             for record in processed_data:
-                device_id = record.get("device_id", "unknown")
-                sensor_type = record.get("sensor_type", "unknown")
-                value = record.get("value")
-                timestamp = record.get("timestamp")
-                
-                analysis["devices"].add(device_id)
-                analysis["sensors"].add(sensor_type)
-                
-                # Última lectura por sensor
-                if sensor_type not in analysis["latest_readings"]:
-                    analysis["latest_readings"][sensor_type] = {
-                        "value": value,
-                        "device": device_id,
-                        "timestamp": timestamp
-                    }
+                try:
+                    # Verificación adicional para asegurar que sea un diccionario
+                    if not isinstance(record, dict):
+                        logger.warning(f"⚠️ Registro no es diccionario: {type(record)}")
+                        continue
+                        
+                    device_id = record.get("device_id", "unknown")
+                    sensor_type = record.get("sensor_type", "unknown") 
+                    value = record.get("value")
+                    timestamp = record.get("timestamp")
+                    
+                    analysis["devices"].add(device_id)
+                    analysis["sensors"].add(sensor_type)
+                    
+                    # Última lectura por sensor
+                    if sensor_type not in analysis["latest_readings"]:
+                        analysis["latest_readings"][sensor_type] = {
+                            "value": value,
+                            "device": device_id,
+                            "timestamp": timestamp
+                        }
+                except Exception as e:
+                    logger.warning(f"⚠️ Error procesando registro en análisis: {e}")
+                    continue
             
             # Convertir sets a listas para serialización
             analysis["devices"] = list(analysis["devices"])
