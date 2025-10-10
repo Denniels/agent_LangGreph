@@ -1,9 +1,9 @@
 """
-🤖 AGENTE IoT REMOTO - STREAMLIT CLOUD FINAL
-==========================================
+🤖 AGENTE IoT REMOTO - STREAMLIT CLOUD SIMPLIFICADO
+=================================================
 
 Punto de entrada PRINCIPAL para Streamlit Cloud.
-Versión COMPLETA con todas las funcionalidades.
+Versión SIMPLIFICADA sin complejidades innecesarias.
 """
 
 # Configuración CRÍTICA para Streamlit Cloud
@@ -22,11 +22,11 @@ if not os.getenv('GROQ_API_KEY'):
 if not os.getenv('JETSON_API_URL'):
     os.environ['JETSON_API_URL'] = 'https://respect-craps-lit-aged.trycloudflare.com'
 
-# EJECUTAR APLICACIÓN COMPLETA FINAL
+# EJECUTAR APLICACIÓN SIMPLIFICADA
 if __name__ == "__main__":
     try:
-        # Usar app completa con todas las funcionalidades
-        exec(open('streamlit_app/app_complete_final.py').read())
+        # Usar app simplificada sin semáforo complejo
+        exec(open('streamlit_app/app_final_simplified.py').read())
     except Exception as e:
         print(f"Error: {e}")
         import streamlit as st
