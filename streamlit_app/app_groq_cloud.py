@@ -130,25 +130,49 @@ def initialize_services():
         return None, None, None
 
 def create_matplotlib_chart(data, query_type="time_series"):
-    """Crear gráficos matplotlib directamente en Streamlit"""
-    modules = load_project_modules()
-    if not modules or not data:
+    """Crear gráficos matplotlib directamente en Streamlit - Versión Robusta"""
+    if not data:
+        st.warning("📊 No hay datos disponibles para gráficos")
         return None
     
     try:
         import matplotlib.pyplot as plt
         import pandas as pd
         import numpy as np
+        from datetime import datetime
         
         # Configurar matplotlib para Streamlit
         plt.style.use('default')
         
+        # Convertir datos a DataFrame
+        df = pd.DataFrame(data)
+        
+        # Validar que tenemos las columnas necesarias
+        required_columns = ['timestamp', 'device_id', 'sensor_type', 'value']
+        if not all(col in df.columns for col in required_columns):
+            st.error(f"❌ Faltan columnas requeridas. Disponibles: {list(df.columns)}")
+            return None
+        
+        # Limpiar y convertir datos
+        df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
+        df['value'] = pd.to_numeric(df['value'], errors='coerce')
+        
+        # Eliminar filas con datos inválidos
+        df = df.dropna(subset=['timestamp', 'value'])
+        
+        if df.empty:
+            st.warning("📊 No hay datos válidos después de limpieza")
+            return None
+        
+        st.info(f"📊 Procesando {len(df)} registros para gráfico {query_type}")
+        
         if query_type == "time_series":
-            # Gráfico de series temporales
-            fig, ax = plt.subplots(figsize=(12, 6))
+            # Gráfico de series temporales mejorado
+            fig, ax = plt.subplots(figsize=(14, 8))
             
-            df = pd.DataFrame(data)
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            # Colores predefinidos para mejor visualización
+            colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']
+            color_idx = 0
             
             # Agrupar por dispositivo y sensor
             for device_id in df['device_id'].unique():
@@ -158,15 +182,77 @@ def create_matplotlib_chart(data, query_type="time_series"):
                     sensor_data = device_data[device_data['sensor_type'] == sensor_type]
                     
                     if len(sensor_data) > 0:
+                        # Ordenar por timestamp
+                        sensor_data = sensor_data.sort_values('timestamp')
+                        
                         label = f"{device_id} - {sensor_type}"
+                        color = colors[color_idx % len(colors)]
+                        
                         ax.plot(sensor_data['timestamp'], sensor_data['value'], 
-                               marker='o', label=label, linewidth=2, markersize=4)
+                               marker='o', label=label, linewidth=2.5, 
+                               markersize=5, color=color, alpha=0.8)
+                        
+                        color_idx += 1
             
-            ax.set_title("📈 Series Temporales de Sensores", fontsize=14, fontweight='bold')
-            ax.set_xlabel("Tiempo")
-            ax.set_ylabel("Valor del Sensor")
-            ax.legend()
+            ax.set_title("📈 Evolución Temporal de Sensores IoT", fontsize=16, fontweight='bold', pad=20)
+            ax.set_xlabel("Tiempo", fontsize=12)
+            ax.set_ylabel("Valor del Sensor", fontsize=12)
+            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
             ax.grid(True, alpha=0.3)
+            
+            # Rotar etiquetas de tiempo para mejor legibilidad
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            
+            return fig
+            
+        elif query_type == "statistics":
+            # Gráfico de estadísticas por sensor
+            fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+            fig.suptitle("📊 Estadísticas por Tipo de Sensor", fontsize=16, fontweight='bold')
+            
+            # Estadísticas por sensor
+            sensor_stats = df.groupby(['device_id', 'sensor_type'])['value'].agg(['mean', 'min', 'max', 'std']).reset_index()
+            
+            # Gráfico 1: Temperaturas promedio
+            temp_data = df[df['sensor_type'].str.contains('temperature', case=False, na=False)]
+            if not temp_data.empty:
+                temp_stats = temp_data.groupby(['device_id', 'sensor_type'])['value'].mean().unstack(fill_value=0)
+                temp_stats.plot(kind='bar', ax=axes[0,0], color=['#FF6B6B', '#FF8E8E', '#FFAAAA'])
+                axes[0,0].set_title("🌡️ Temperaturas Promedio")
+                axes[0,0].set_ylabel("Temperatura (°C)")
+                axes[0,0].legend(rotation=45)
+            
+            # Gráfico 2: Luminosidad
+            ldr_data = df[df['sensor_type'] == 'ldr']
+            if not ldr_data.empty:
+                ldr_stats = ldr_data.groupby('device_id')['value'].mean()
+                ldr_stats.plot(kind='bar', ax=axes[0,1], color='#FFEAA7')
+                axes[0,1].set_title("💡 Luminosidad Promedio")
+                axes[0,1].set_ylabel("Luminosidad")
+            
+            # Gráfico 3: Distribución de valores
+            df.boxplot(column='value', by='sensor_type', ax=axes[1,0])
+            axes[1,0].set_title("📦 Distribución por Sensor")
+            axes[1,0].set_ylabel("Valor")
+            
+            # Gráfico 4: Conteo por dispositivo
+            device_counts = df.groupby('device_id').size()
+            device_counts.plot(kind='pie', ax=axes[1,1], autopct='%1.1f%%', colors=['#4ECDC4', '#45B7D1'])
+            axes[1,1].set_title("📊 Registros por Dispositivo")
+            
+            plt.tight_layout()
+            return fig
+        
+        else:
+            st.warning(f"⚠️ Tipo de gráfico '{query_type}' no soportado")
+            return None
+            
+    except Exception as e:
+        st.error(f"❌ Error creando gráfico: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
+        return None
             
             # Rotar etiquetas de fecha
             plt.xticks(rotation=45)
@@ -363,31 +449,57 @@ def display_chat_interface():
                         st.error("❌ No se pudo generar respuesta")
                         response_text = "❌ Error interno del sistema"
                     
-                    # GENERAR Y MOSTRAR GRÁFICOS SI SE SOLICITAN
+                    # GENERAR Y MOSTRAR GRÁFICOS AUTOMÁTICAMENTE
                     charts_generated = []
                     
-                    # Detectar si se solicitan gráficos
-                    chart_keywords = ['grafica', 'gráfica', 'grafico', 'gráfico', 'visualizar', 'chart', 'plot']
+                    # Detectar si se solicitan gráficos o análisis que ameriten visualización
+                    chart_keywords = [
+                        'grafica', 'gráfica', 'grafico', 'gráfico', 'visualizar', 'chart', 'plot',
+                        'estadistica', 'estadística', 'analisis', 'análisis', 'tendencia', 'evolution',
+                        'temperatura', 'luminosidad', 'sensor', 'datos', 'registros', 'ultimas', 'últimas',
+                        'avanzada', 'detallado', 'completo', 'resumen', 'metrica', 'métrica'
+                    ]
                     needs_charts = any(keyword in prompt.lower() for keyword in chart_keywords)
                     
-                    if needs_charts:
-                        st.info("📊 Generando gráficos...")
+                    # También generar gráficos si la respuesta contiene análisis detallado
+                    detailed_analysis_indicators = [
+                        'Promedio de temperatura', 'Temperaturas:', 'Luminosidad:', 'Dispositivo',
+                        'Tendencias observadas', 'Métricas clave', 'temperatura_', 'ntc_', 'ldr'
+                    ]
+                    has_detailed_analysis = any(indicator in response_text for indicator in detailed_analysis_indicators)
+                    
+                    if needs_charts or has_detailed_analysis:
+                        st.info("📊 Generando gráficos automáticamente...")
                         
                         try:
-                            # Obtener datos recientes para gráficos
-                            all_chart_data = []
-                            devices = jetson_connector.get_devices()
+                            # Obtener datos usando la configuración temporal actual
+                            analysis_hours = getattr(st.session_state, 'analysis_hours', 3.0)
                             
-                            for device in devices:
-                                device_id = device.get('device_id')
-                                if device_id:
-                                    # Obtener más datos para gráficos
-                                    device_data = jetson_connector.get_sensor_data(
-                                        device_id=device_id, 
-                                        limit=50  # Más datos para gráficos mejores
-                                    )
-                                    if device_data:
-                                        all_chart_data.extend(device_data)
+                            # Usar DirectAPIAgent directamente para obtener más datos
+                            from modules.agents.direct_api_agent import DirectAPIAgent
+                            base_url = "https://respect-craps-lit-aged.trycloudflare.com"
+                            direct_agent = DirectAPIAgent(base_url=base_url)
+                            
+                            # Obtener datos con la configuración temporal actual
+                            data_result = direct_agent.get_all_recent_data(hours=analysis_hours)
+                            
+                            if data_result.get('status') == 'success':
+                                all_chart_data = data_result.get('sensor_data', [])
+                                st.success(f"✅ Datos obtenidos: {len(all_chart_data)} registros para gráficos")
+                            else:
+                                # Fallback al método anterior
+                                all_chart_data = []
+                                devices = jetson_connector.get_devices()
+                                
+                                for device in devices:
+                                    device_id = device.get('device_id')
+                                    if device_id:
+                                        device_data = jetson_connector.get_sensor_data(
+                                            device_id=device_id, 
+                                            limit=100  # Más datos para gráficos mejores
+                                        )
+                                        if device_data:
+                                            all_chart_data.extend(device_data)
                             
                             if all_chart_data:
                                 # Generar gráfico de series temporales
