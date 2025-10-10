@@ -163,7 +163,7 @@ class DirectJetsonConnector:
                 device_id = device.get('device_id')
                 if device_id:
                     try:
-                        device_data = self.get_sensor_data_direct(device_id, limit=200)
+                        device_data = self.get_sensor_data_direct(device_id, limit=10)
                         all_sensor_data.extend(device_data)
                         device_stats[device_id] = len(device_data)
                         logger.info(f"📱 {device_id}: {len(device_data)} registros")

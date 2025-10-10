@@ -1,0 +1,38 @@
+{
+  "timestamp": "2025-10-10T22:29:02.649135+00:00",
+  "sistema": "Sistema IoT con IA - Versión Mejorada",
+  "mejoras_implementadas": [
+    "Banner profesional integrado",
+    "Sistema de paginación para consultas extensas",
+    "Configuración temporal dinámica (1h-7días)",
+    "Métodos adaptativos (estándar vs paginado)",
+    "Interfaz optimizada para demostración a clientes",
+    "Información técnica en lenguaje comercial"
+  ],
+  "capacidades_técnicas": {
+    "consultas_rápidas": "1-6 horas (hasta 200 registros)",
+    "consultas_extensas": "6+ horas (hasta 2,000 registros)",
+    "métodos": [
+      "estándar",
+      "paginado_inteligente"
+    ],
+    "hardware": "NVIDIA Jetson Nano 4GB",
+    "ia": "Groq API (Gratuita)",
+    "frontend": "Streamlit Cloud"
+  },
+  "configuraciones_disponibles": [
+    "3 horas (Tiempo Real)",
+    "6 horas (Reciente)",
+    "12 horas (Paginado)",
+    "24 horas (1 día)",
+    "48 horas (2 días)",
+    "168 horas (1 semana)"
+  ],
+  "optimizaciones": [
+    "Banner profesional que explica capacidades sin tecnicismos",
+    "Selección automática de método según duración",
+    "Información contextual sobre hardware y limitaciones",
+    "Interfaz adaptativa que muestra método usado",
+    "Métricas en tiempo real de configuración actual"
+  ]
+}

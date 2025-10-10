@@ -3,7 +3,7 @@
 
 import requests
 
-url = "https://couples-mario-repository-alive.trycloudflare.com"
+url = "https://respect-craps-lit-aged.trycloudflare.com"
 
 print(f"🔍 DIAGNOSTICO DETALLADO: {url}")
 

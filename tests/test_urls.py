@@ -4,8 +4,7 @@
 import requests
 
 urls = [
-    "https://dpi-opportunity-hybrid-manufacturer.trycloudflare.com",
-    "https://couples-mario-repository-alive.trycloudflare.com"
+    "https://respect-craps-lit-aged.trycloudflare.com"
 ]
 
 for url in urls:

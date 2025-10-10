@@ -1,0 +1,58 @@
+{
+  "timestamp": "2025-10-10T22:20:56.211784+00:00",
+  "total_tests": 5,
+  "successful_tests": 5,
+  "failed_tests": 0,
+  "results": [
+    {
+      "scenario": "3 horas (estándar)",
+      "hours": 3,
+      "success": true,
+      "records": 200,
+      "devices": 2,
+      "method": "general_endpoint",
+      "duration_seconds": 2.034048,
+      "records_per_hour": 66.67
+    },
+    {
+      "scenario": "12 horas (paginado)",
+      "hours": 12,
+      "success": true,
+      "records": 200,
+      "devices": 2,
+      "method": "paginated",
+      "duration_seconds": 1.907538,
+      "records_per_hour": 16.67
+    },
+    {
+      "scenario": "24 horas (1 día)",
+      "hours": 24,
+      "success": true,
+      "records": 200,
+      "devices": 2,
+      "method": "paginated",
+      "duration_seconds": 1.98495,
+      "records_per_hour": 8.33
+    },
+    {
+      "scenario": "48 horas (2 días)",
+      "hours": 48,
+      "success": true,
+      "records": 200,
+      "devices": 2,
+      "method": "paginated",
+      "duration_seconds": 2.417934,
+      "records_per_hour": 4.17
+    },
+    {
+      "scenario": "168 horas (1 semana)",
+      "hours": 168,
+      "success": true,
+      "records": 200,
+      "devices": 2,
+      "method": "paginated",
+      "duration_seconds": 6.224463,
+      "records_per_hour": 1.19
+    }
+  ]
+}

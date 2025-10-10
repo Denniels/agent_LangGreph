@@ -262,6 +262,40 @@ def display_chat_interface():
                 for chart_fig in message["charts"]:
                     st.pyplot(chart_fig)
     
+    # Configuración de análisis temporal
+    with st.expander("⏰ Configuración de Análisis Temporal", expanded=False):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            time_range = st.selectbox(
+                "📅 Rango de Datos",
+                options=[
+                    ("3h", "3 horas (Tiempo Real)"),
+                    ("6h", "6 horas (Reciente)"),
+                    ("12h", "12 horas (Paginado)"),
+                    ("24h", "24 horas (1 día)"),
+                    ("48h", "48 horas (2 días)"),
+                    ("168h", "168 horas (1 semana)")
+                ],
+                format_func=lambda x: x[1],
+                index=0,
+                key="time_range_selector"
+            )
+        
+        with col2:
+            hours = float(time_range[0][:-1])  # Extraer número de horas
+            
+            if hours <= 6:
+                st.success("⚡ Consulta rápida - Respuesta inmediata")
+                st.caption("📊 Método: Estándar (hasta 200 registros)")
+            else:
+                st.info("📚 Consulta extensa - Paginación automática")
+                max_records = min(2000, int(hours * 50))
+                st.caption(f"📊 Método: Paginado (hasta {max_records} registros)")
+        
+        # Guardar configuración en session_state
+        st.session_state.analysis_hours = hours
+    
     # Input del usuario
     if prompt := st.chat_input("💬 Escribe tu consulta sobre sensores IoT..."):
         # Mensaje del usuario
@@ -279,9 +313,12 @@ def display_chat_interface():
                     method_used = "principal"
                     
                     try:
+                        # Obtener configuración temporal
+                        analysis_hours = getattr(st.session_state, 'analysis_hours', 3.0)
+                        
                         if hasattr(cloud_agent, 'process_query_sync'):
-                            # Usar la función síncrona optimizada
-                            response_text = cloud_agent.process_query_sync(prompt)
+                            # Usar la función síncrona optimizada con configuración temporal
+                            response_text = cloud_agent.process_query_sync(prompt, analysis_hours=analysis_hours)
                         else:
                             # Fallback al método async si es necesario
                             import asyncio
@@ -607,6 +644,49 @@ def display_sidebar():
     # Controles del sistema
     st.sidebar.subheader("⚙️ Controles")
     
+    # Información sobre capacidades de paginación
+    with st.sidebar.expander("📊 Capacidades de Análisis", expanded=False):
+        st.markdown("""
+        **🔍 Análisis Temporal Disponible:**
+        
+        **Consultas Rápidas:**
+        • 1-6 horas: Respuesta inmediata
+        • Hasta 200 registros
+        • Método: Estándar
+        
+        **Consultas Extensas:**
+        • 6+ horas: Paginación automática
+        • Hasta 2,000 registros
+        • Método: Paginado inteligente
+        
+        **📈 Casos de Uso:**
+        • Tiempo real: 3-6h
+        • Análisis diario: 24h
+        • Tendencias: 48h-7días
+        
+        **⚡ Optimización:**
+        Sistema inteligente adapta método 
+        según duración solicitada.
+        """)
+    
+    # Información del sistema
+    with st.sidebar.expander("🏭 Info del Sistema", expanded=False):
+        current_hours = getattr(st.session_state, 'analysis_hours', 3.0)
+        method = "Paginado" if current_hours > 6 else "Estándar"
+        max_records = min(2000, int(current_hours * 50)) if current_hours > 6 else 200
+        
+        st.markdown(f"""
+        **Configuración Actual:**
+        • Rango: {current_hours} horas
+        • Método: {method}
+        • Máx. Registros: {max_records}
+        
+        **Hardware:**
+        • NVIDIA Jetson Nano 4GB
+        • API: FastAPI + SQLite
+        • IA: Groq (Gratuita)
+        """)
+    
     if st.sidebar.button("🗑️ Limpiar Cache"):
         st.cache_resource.clear()
         st.sidebar.success("Cache limpiado")
@@ -617,13 +697,149 @@ def display_sidebar():
         st.sidebar.success("Servicios recargados")
         st.rerun()
 
+def display_professional_banner():
+    """
+    Mostrar banner profesional con información del sistema IoT
+    """
+    
+    # CSS personalizado para el banner
+    st.markdown("""
+    <style>
+    .professional-banner {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        color: white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .banner-header {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .banner-content {
+        font-size: 16px;
+        line-height: 1.6;
+        margin-bottom: 15px;
+    }
+    
+    .capabilities-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        margin: 15px 0;
+    }
+    
+    .capability-item {
+        background: rgba(255,255,255,0.1);
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #4CAF50;
+    }
+    
+    .limitation-item {
+        background: rgba(255,255,255,0.1);
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #FF9800;
+    }
+    
+    .tech-specs {
+        background: rgba(255,255,255,0.08);
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+        font-size: 14px;
+    }
+    
+    .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    
+    .status-active {
+        background-color: #4CAF50;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Banner principal
+    st.markdown(f"""
+    <div class="professional-banner">
+        <div class="banner-header">
+            <span class="status-indicator status-active"></span>
+            🏭 Sistema IoT Industrial - Monitoreo con IA
+        </div>
+        
+        <div class="banner-content">
+            Sistema avanzado de monitoreo IoT ejecutándose en <strong>NVIDIA Jetson Nano</strong> con 
+            capacidades de IA integradas para análisis inteligente de sensores industriales.
+        </div>
+        
+        <div class="capabilities-grid">
+            <div class="capability-item">
+                <strong>📊 Análisis Temporal Avanzado</strong><br>
+                • Datos en tiempo real (1-6 horas)<br>
+                • Análisis histórico con paginación (hasta 1 semana)<br>
+                • Tendencias automáticas con IA
+            </div>
+            
+            <div class="capability-item">
+                <strong>🤖 IA Conversacional</strong><br>
+                • Chat inteligente con Groq LLM<br>
+                • Análisis predictivo automático<br>
+                • Recomendaciones en lenguaje natural
+            </div>
+            
+            <div class="capability-item">
+                <strong>🔍 Monitoreo Multi-Sensor</strong><br>
+                • Temperatura (3 tipos)<br>
+                • Luminosidad (LDR)<br>
+                • Sensores NTC industriales
+            </div>
+            
+            <div class="limitation-item">
+                <strong>⚙️ Optimizado para Jetson Nano</strong><br>
+                • Consultas extensas usan paginación inteligente<br>
+                • Hasta 2,000 registros por análisis<br>
+                • Hardware embebido de alto rendimiento
+            </div>
+        </div>
+        
+        <div class="tech-specs">
+            <strong>🔧 Stack Tecnológico:</strong>
+            Jetson Nano 4GB | Groq API (Gratuita) | FastAPI + SQLite | Streamlit Cloud | 
+            LangGraph para IA conversacional
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 def main():
-    """Función principal optimizada"""
+    """Función principal optimizada con banner profesional"""
     
     # Verificar configuración básica
     if not GROQ_API_KEY:
         st.error("❌ Configure GROQ_API_KEY en Streamlit Cloud Secrets")
         st.stop()
+    
+    # MOSTRAR BANNER PROFESIONAL
+    display_professional_banner()
     
     # Crear pestañas COMPLETAS (sin eliminar funcionalidades)
     tab1, tab2, tab3 = st.tabs([

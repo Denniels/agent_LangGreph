@@ -56,7 +56,7 @@ def test_direct_api_agent_corrected():
             # Probar con ambos dispositivos
             for device in devices:
                 device_id = device.get('device_id')
-                sensor_data = agent.get_sensor_data_direct(device_id, hours=0.17)
+                sensor_data = agent.get_sensor_data_direct(device_id, limit=10)
                 print(f"Datos de sensores para {device_id}: {len(sensor_data)} registros")
                 
                 if sensor_data and isinstance(sensor_data, list) and len(sensor_data) > 0:

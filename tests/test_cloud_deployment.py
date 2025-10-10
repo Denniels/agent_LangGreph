@@ -105,7 +105,7 @@ async def test_jetson_connection():
         from modules.tools.jetson_api_connector import JetsonAPIConnector
         
         # URL de Jetson
-        jetson_url = os.getenv("JETSON_API_URL", "https://dpi-opportunity-hybrid-manufacturer.trycloudflare.com")
+        jetson_url = os.getenv("JETSON_API_URL", "https://respect-craps-lit-aged.trycloudflare.com")
         
         # Crear connector
         connector = JetsonAPIConnector(api_url=jetson_url)

@@ -305,7 +305,21 @@ class CloudIoTAgent:
                     
                     if hasattr(self, 'direct_api_agent') and self.direct_api_agent:
                         # Usar el agente directo que copia la lógica del frontend
-                        direct_result = self.direct_api_agent.get_all_recent_data()
+                        # Intentar obtener configuración temporal del contexto
+                        analysis_hours = 3.0  # Default
+                        
+                        # Buscar si hay configuración temporal en la consulta
+                        if "CONFIGURACIÓN TEMPORAL" in user_query:
+                            try:
+                                import re
+                                match = re.search(r"(\d+(?:\.\d+)?)\s*horas", user_query)
+                                if match:
+                                    analysis_hours = float(match.group(1))
+                                    logger.info(f"📅 Usando configuración temporal: {analysis_hours} horas")
+                            except:
+                                pass
+                        
+                        direct_result = self.direct_api_agent.get_all_recent_data(hours=analysis_hours)
                         
                         if direct_result.get("status") == "success":
                             all_data = direct_result.get("sensor_data", [])
@@ -1204,13 +1218,14 @@ Los gráficos han sido guardados y están disponibles para análisis visual de l
                 "timestamp": datetime.now().isoformat()
             }
     
-    def process_query_sync(self, user_query: str, thread_id: str = "cloud-session") -> str:
+    def process_query_sync(self, user_query: str, thread_id: str = "cloud-session", analysis_hours: float = None) -> str:
         """
         Versión síncrona de process_query para usar en Streamlit.
         
         Args:
             user_query: Consulta del usuario
             thread_id: ID del hilo de conversación
+            analysis_hours: Horas para análisis temporal (None = usar configuración por defecto)
             
         Returns:
             String con la respuesta procesada
@@ -1222,8 +1237,16 @@ Los gráficos han sido guardados y están disponibles para análisis visual de l
             # Aplicar nest_asyncio para permitir loops anidados
             nest_asyncio.apply()
             
+            # Agregar información temporal al contexto si se especifica
+            if analysis_hours:
+                # Modificar la consulta para incluir contexto temporal
+                temporal_context = f"\n[CONFIGURACIÓN TEMPORAL: Analizar datos de las últimas {analysis_hours} horas]"
+                enhanced_query = user_query + temporal_context
+            else:
+                enhanced_query = user_query
+            
             # Ejecutar la función async
-            result = asyncio.run(self.process_query(user_query, thread_id))
+            result = asyncio.run(self.process_query(enhanced_query, thread_id))
             
             # Extraer respuesta del resultado
             if isinstance(result, dict):
