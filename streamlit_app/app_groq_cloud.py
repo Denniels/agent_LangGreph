@@ -318,7 +318,7 @@ def display_chat_interface():
                         
                         if hasattr(cloud_agent, 'process_query_sync'):
                             # Usar la función síncrona optimizada con configuración temporal
-                            response_text = cloud_agent.process_query_sync(prompt, analysis_hours=analysis_hours)
+                            response_text = cloud_agent.process_query_sync(prompt, "cloud-session", analysis_hours)
                         else:
                             # Fallback al método async si es necesario
                             import asyncio
