@@ -30,7 +30,7 @@ class JetsonAPIManager:
     def __init__(self):
         # URLs candidatas (orden de prioridad)
         self.candidate_urls = [
-            "https://featured-emotions-hometown-offset.trycloudflare.com",       # URL verificada que funciona
+            "https://dependent-discussions-venice-filling.trycloudflare.com",       # URL verificada que funciona
             "https://dpi-opportunity-hybrid-manufacturer.trycloudflare.com",  # URL alternativa
             # Agregar aquí otras URLs conocidas o patrones
             # "https://another-tunnel-name.trycloudflare.com",
