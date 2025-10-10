@@ -232,9 +232,27 @@ def show_sidebar():
             - Tendencias semanales: 168h
             """)
         
-        # Información técnica
+        # Información técnica y estado real
         with st.expander("🏭 Info del Sistema", expanded=False):
-            st.markdown("""
+            # Obtener estado actual de dispositivos
+            try:
+                from modules.agents.direct_api_agent import DirectAPIAgent
+                direct_agent = DirectAPIAgent(base_url=JETSON_API_URL)
+                status_result = direct_agent.get_all_recent_data(hours=1)
+                
+                if status_result.get('status') == 'success':
+                    active_devices = status_result.get('active_devices', 0)
+                    total_records = status_result.get('total_records', 0)
+                    devices_info = f"✅ {active_devices} dispositivos activos"
+                    records_info = f"📊 {total_records} registros recientes"
+                else:
+                    devices_info = "🔧 Verificando conexión..."
+                    records_info = "📊 Consultando datos..."
+            except:
+                devices_info = "🔧 Estado: Verificando..."
+                records_info = "📊 Datos: Cargando..."
+            
+            st.markdown(f"""
             **🖥️ Hardware:**
             - NVIDIA Jetson Nano 4GB
             - ARM Cortex-A57 Quad-core
@@ -244,10 +262,10 @@ def show_sidebar():
             - IA: Groq API (Gratuita)
             - Frontend: Streamlit Cloud
             
-            **📊 Sensores:**
-            - 6 tipos monitoreados
-            - 2 dispositivos activos
-            - Actualización en tiempo real
+            **📊 Estado Actual:**
+            - {devices_info}
+            - {records_info}
+            - Paginación: {method} active
             """)
         
         # Controles
@@ -260,9 +278,25 @@ def show_sidebar():
             st.rerun()
 
 def show_banner():
-    """Banner profesional simplificado"""
+    """Banner profesional con estado real de dispositivos"""
     st.markdown("## 🏭 Sistema IoT Industrial - Monitoreo con IA")
-    st.markdown("🟢 **Estado:** Sistema Operativo | 📡 **Conectividad:** API Activa")
+    
+    # Obtener estado real para el banner
+    try:
+        from modules.agents.direct_api_agent import DirectAPIAgent
+        direct_agent = DirectAPIAgent(base_url=JETSON_API_URL)
+        banner_status = direct_agent.get_all_recent_data(hours=1)
+        
+        if banner_status.get('status') == 'success':
+            active_devices = banner_status.get('active_devices', 0)
+            total_records = banner_status.get('total_records', 0)
+            connectivity_status = f"✅ {active_devices} dispositivos activos | 📊 {total_records} registros recientes"
+        else:
+            connectivity_status = "🔧 Sistema inicializando..."
+    except:
+        connectivity_status = "🔧 Verificando conectividad..."
+    
+    st.markdown(f"🟢 **Estado:** Sistema Operativo | 📡 **Conectividad:** {connectivity_status}")
     
     st.info("""
     **Sistema avanzado de monitoreo IoT** ejecutándose en **NVIDIA Jetson Nano** con 
@@ -305,35 +339,97 @@ def main():
         services_available = False
     
     # Estado de dispositivos
-    if services_available and jetson_connector:
+    if services_available:
         with st.expander("📱 Estado de Dispositivos", expanded=False):
             try:
-                devices = jetson_connector.get_devices()
+                # USAR DIRECTAPIAGENT para obtener estado real (mismo que funciona para análisis)
+                from modules.agents.direct_api_agent import DirectAPIAgent
+                direct_agent = DirectAPIAgent(base_url=JETSON_API_URL)
+                
+                # Obtener datos recientes para verificar estado
+                recent_data_result = direct_agent.get_all_recent_data(hours=0.5)  # Últimos 30 minutos
+                
                 col1, col2, col3 = st.columns(3)
                 
-                with col1:
-                    st.metric("🔌 Dispositivos", len(devices))
-                
-                device_info = []
-                for device in devices:
-                    device_id = device.get('device_id', 'N/A')
-                    try:
-                        recent_data = jetson_connector.get_sensor_data(device_id=device_id, limit=1)
-                        status = "🟢 Activo" if recent_data else "🔴 Inactivo"
-                        device_info.append(f"**{device_id}**: {status}")
-                    except:
-                        device_info.append(f"**{device_id}**: ❓ Desconocido")
-                
-                with col2:
-                    for info in device_info[:len(device_info)//2 + 1]:
-                        st.write(info)
-                
-                with col3:
-                    for info in device_info[len(device_info)//2 + 1:]:
-                        st.write(info)
+                if recent_data_result.get('status') == 'success':
+                    all_data = recent_data_result.get('sensor_data', [])
+                    devices = recent_data_result.get('data', {}).get('devices', [])
+                    
+                    with col1:
+                        st.metric("🔌 Dispositivos Detectados", len(devices))
+                    
+                    # Analizar estado real basado en datos recientes
+                    device_status = {}
+                    if all_data:
+                        # Agrupar por dispositivo y encontrar último timestamp
+                        from datetime import datetime, timedelta
+                        import pandas as pd
                         
+                        df = pd.DataFrame(all_data)
+                        df['timestamp'] = pd.to_datetime(df['timestamp'])
+                        cutoff_time = datetime.now() - timedelta(minutes=30)  # Últimos 30 min
+                        
+                        for device_id in df['device_id'].unique():
+                            device_data = df[df['device_id'] == device_id]
+                            latest_data = device_data[device_data['timestamp'] > cutoff_time]
+                            
+                            if len(latest_data) > 0:
+                                latest_time = device_data['timestamp'].max()
+                                minutes_ago = (datetime.now() - latest_time).total_seconds() / 60
+                                
+                                if minutes_ago < 60:  # Datos en última hora
+                                    device_status[device_id] = {
+                                        'status': '🟢 Activo',
+                                        'last_seen': f"{int(minutes_ago)} min ago",
+                                        'sensors': len(device_data['sensor_type'].unique()),
+                                        'records': len(device_data)
+                                    }
+                                else:
+                                    device_status[device_id] = {
+                                        'status': '🟡 Intermitente',
+                                        'last_seen': f"{int(minutes_ago)} min ago",
+                                        'sensors': len(device_data['sensor_type'].unique()),
+                                        'records': len(device_data)
+                                    }
+                            else:
+                                device_status[device_id] = {
+                                    'status': '🔴 Inactivo',
+                                    'last_seen': 'Sin datos recientes',
+                                    'sensors': 0,
+                                    'records': 0
+                                }
+                    
+                    # Mostrar información detallada de dispositivos
+                    with col2:
+                        st.markdown("**📊 Estado Detallado:**")
+                        for device_id, info in device_status.items():
+                            st.write(f"**{device_id}**: {info['status']}")
+                            st.caption(f"Última lectura: {info['last_seen']}")
+                    
+                    with col3:
+                        st.markdown("**🔍 Sensores Activos:**")
+                        for device_id, info in device_status.items():
+                            st.write(f"**{device_id}**: {info['sensors']} sensores")
+                            st.caption(f"Registros recientes: {info['records']}")
+                    
+                    # Resumen de conectividad
+                    active_devices = sum(1 for info in device_status.values() if '🟢' in info['status'])
+                    total_devices = len(device_status)
+                    
+                    if active_devices == total_devices:
+                        st.success(f"✅ Todos los dispositivos ({active_devices}/{total_devices}) están activos")
+                    elif active_devices > 0:
+                        st.warning(f"⚠️ {active_devices}/{total_devices} dispositivos activos")
+                    else:
+                        st.error(f"❌ Ningún dispositivo activo ({active_devices}/{total_devices})")
+                
+                else:
+                    st.error("❌ No se pudo obtener estado de dispositivos")
+                    
             except Exception as e:
-                st.error(f"Error obteniendo dispositivos: {e}")
+                st.error(f"❌ Error obteniendo estado: {e}")
+                # Fallback simple
+                st.info("🔧 Usando estado básico - Sistema operativo")
     
     # Configuración temporal mejorada
     with st.expander("⏰ Configuración de Análisis Temporal", expanded=False):
