@@ -4,7 +4,7 @@
 import requests
 
 urls = [
-    "https://respect-craps-lit-aged.trycloudflare.com"
+    "https://wonder-sufficiently-generator-click.trycloudflare.com"
 ]
 
 for url in urls:
