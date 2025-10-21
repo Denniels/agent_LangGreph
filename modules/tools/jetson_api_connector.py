@@ -432,7 +432,7 @@ def create_jetson_connector(url: str = None) -> JetsonAPIConnector:
         Instancia de JetsonAPIConnector
     """
     if not url:
-        url = "https://wonder-sufficiently-generator-click.trycloudflare.com"
+        url = "https://plain-state-refers-nutritional.trycloudflare.com"
     
     return JetsonAPIConnector(url)
 

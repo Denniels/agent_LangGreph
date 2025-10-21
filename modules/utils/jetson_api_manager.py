@@ -30,7 +30,7 @@ class JetsonAPIManager:
     def __init__(self):
         # URLs candidatas (orden de prioridad)
         self.candidate_urls = [
-            "https://wonder-sufficiently-generator-click.trycloudflare.com",       # URL verificada que funciona
+            "https://plain-state-refers-nutritional.trycloudflare.com",       # URL verificada que funciona
             "https://dpi-opportunity-hybrid-manufacturer.trycloudflare.com",  # URL alternativa
             # Agregar aquí otras URLs conocidas o patrones
             # "https://another-tunnel-name.trycloudflare.com",

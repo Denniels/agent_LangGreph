@@ -79,7 +79,7 @@ def main():
             
             try:
                 # Conectar al agente
-                base_url = "https://wonder-sufficiently-generator-click.trycloudflare.com"
+                base_url = "https://plain-state-refers-nutritional.trycloudflare.com"
                 agent = DirectAPIAgent(base_url=base_url)
                 
                 # Obtener datos con paginación automática

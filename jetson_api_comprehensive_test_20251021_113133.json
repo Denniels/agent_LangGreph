@@ -1,0 +1,238 @@
+{
+  "timestamp": "2025-10-21T11:31:33.489296",
+  "test_results": {
+    "root": {
+      "success": true,
+      "data": {
+        "success": true,
+        "message": "IoT Streamlit Backend API - Sistema activo",
+        "data": {
+          "version": "1.0.0",
+          "documentation": "/docs",
+          "status": "/status",
+          "devices": "/devices",
+          "data": "/data"
+        },
+        "timestamp": "2025-10-21T14:30:59.888488Z"
+      }
+    },
+    "health": {
+      "success": true,
+      "data": {
+        "status": "healthy",
+        "timestamp": "2025-10-21T14:31:00.296680+00:00",
+        "database": "connected",
+        "devices_count": 2,
+        "cache": {
+          "cache_entries_fresh": 3,
+          "cache_entries_expired": 0,
+          "cache_entries_total": 3,
+          "fallback_entries": 8,
+          "fallback_file_exists": true,
+          "cache_ttl_seconds": 300,
+          "last_updated": "2025-10-21T11:31:00.296618"
+        }
+      }
+    },
+    "status": {
+      "success": true,
+      "data": {
+        "timestamp": "2025-10-21T14:31:00.434946Z",
+        "running": false,
+        "devices": {
+          "total": 2,
+          "online": 2,
+          "offline": 0,
+          "error": 0
+        },
+        "last_data": null,
+        "errors": []
+      }
+    },
+    "devices": {
+      "success": true,
+      "data": [
+        {
+          "device_id": "esp32_wifi_001",
+          "device_type": "arduino_ethernet",
+          "ip_address": "192.168.0.101",
+          "port": 80,
+          "status": "online",
+          "description": null,
+          "has_data": true,
+          "last_seen": "2025-10-21T11:30:24.299659-03:00",
+          "online": true
+        },
+        {
+          "device_id": "arduino_eth_001",
+          "device_type": "arduino_ethernet",
+          "ip_address": "192.168.0.107",
+          "port": 80,
+          "status": "online",
+          "description": null,
+          "has_data": true,
+          "last_seen": "2025-10-21T11:30:24.270081-03:00",
+          "online": true
+        }
+      ],
+      "count": 2
+    },
+    "data_ranges": {
+      "Sin filtro": {
+        "success": true,
+        "count": 200,
+        "params": {}
+      },
+      "Última hora": {
+        "success": true,
+        "count": 200,
+        "params": {
+          "hours": 1
+        }
+      },
+      "Últimas 6 horas": {
+        "success": true,
+        "count": 200,
+        "params": {
+          "hours": 6
+        }
+      },
+      "Último día": {
+        "success": true,
+        "count": 200,
+        "params": {
+          "hours": 24
+        }
+      },
+      "Últimos 3 días": {
+        "success": true,
+        "count": 200,
+        "params": {
+          "days": 3
+        }
+      },
+      "Última semana": {
+        "success": true,
+        "count": 200,
+        "params": {
+          "days": 7
+        }
+      },
+      "Último mes": {
+        "success": true,
+        "count": 200,
+        "params": {
+          "days": 30
+        }
+      }
+    },
+    "device_data": {
+      "esp32_wifi_001": {
+        "6 horas": {
+          "success": true,
+          "count": 0
+        },
+        "24 horas": {
+          "success": true,
+          "count": 0
+        },
+        "3 días": {
+          "success": true,
+          "count": 0
+        },
+        "Última semana": {
+          "success": true,
+          "count": 0
+        }
+      },
+      "arduino_eth_001": {
+        "6 horas": {
+          "success": true,
+          "count": 0
+        },
+        "24 horas": {
+          "success": true,
+          "count": 0
+        },
+        "3 días": {
+          "success": true,
+          "count": 0
+        },
+        "Última semana": {
+          "success": true,
+          "count": 0
+        }
+      }
+    },
+    "cf_url": {
+      "success": true,
+      "data": {
+        "success": true,
+        "cf_url": "https://plain-state-refers-nutritional.trycloudflare.com"
+      }
+    },
+    "service_status": {
+      "success": true,
+      "data": {
+        "success": true,
+        "services": {
+          "Adquisición de Datos": {
+            "status": "active",
+            "semaforo": [
+              "🟢",
+              "Verde",
+              "#28a745"
+            ]
+          },
+          "API Backend": {
+            "status": "active",
+            "semaforo": [
+              "🟢",
+              "Verde",
+              "#28a745"
+            ]
+          },
+          "Sincronización DB": {
+            "status": "active",
+            "semaforo": [
+              "🟢",
+              "Verde",
+              "#28a745"
+            ]
+          },
+          "Túnel Cloudflare": {
+            "status": "active",
+            "semaforo": [
+              "🟢",
+              "Verde",
+              "#28a745"
+            ]
+          }
+        }
+      }
+    },
+    "logs": {
+      "success": false,
+      "error": "HTTP 500"
+    }
+  },
+  "capabilities_analysis": {
+    "max_records": 200,
+    "longest_range": "Último mes",
+    "historical_access": {
+      "Sin filtro": 200,
+      "Última hora": 200,
+      "Últimas 6 horas": 200,
+      "Último día": 200,
+      "Últimos 3 días": 200,
+      "Última semana": 200,
+      "Último mes": 200
+    },
+    "recommendation": "good"
+  },
+  "summary": {
+    "total_tests": 22,
+    "working_tests": 13,
+    "success_rate": 59.09090909090909
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "timestamp": "2025-10-21T11:00:13.567005",
+  "system_status": "CRITICAL",
+  "test_results": {
+    "imports": {
+      "status": "PASS",
+      "description": "Verificación de imports del sistema"
+    },
+    "connector": {
+      "status": "FAIL",
+      "description": "Verificación del conector ultra-robusto",
+      "data": {}
+    },
+    "agent": {
+      "status": "FAIL",
+      "description": "Verificación del agente ultra-robusto",
+      "response_length": 0
+    },
+    "report_generator": {
+      "status": "FAIL",
+      "description": "Verificación del generador de reportes ejecutivos",
+      "sections": []
+    },
+    "streamlit_app": {
+      "status": "PASS",
+      "description": "Verificación de la aplicación Streamlit"
+    }
+  },
+  "summary": {
+    "message": "Sistema con problemas críticos (2/5 tests pasados)",
+    "success_rate": 40.0,
+    "passed_tests": 2,
+    "total_tests": 5
+  },
+  "recommendations": [
+    "❌ NO proceder con deployment",
+    "🔧 Resolver problemas críticos identificados"
+  ]
+}

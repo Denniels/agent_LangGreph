@@ -1,7 +1,7 @@
 import requests
 import json
 
-base_url = 'https://wonder-sufficiently-generator-click.trycloudflare.com'
+base_url = 'https://plain-state-refers-nutritional.trycloudflare.com'
 
 print('🎯 VERIFICANDO SOLUCIÓN ENCONTRADA')
 print('=' * 50)

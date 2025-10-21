@@ -1,7 +1,7 @@
 {
   "timestamp": "2025-10-06T15:36:11.634186",
   "api_results": {
-    "base_url": "https://wonder-sufficiently-generator-click.trycloudflare.com",
+    "base_url": "https://plain-state-refers-nutritional.trycloudflare.com",
     "tests": {
       "health": {
         "status_code": 200,
@@ -34,14 +34,14 @@
   },
   "connector_results": {
     "connector_info": {
-      "base_url": "https://couples-mario-repository-alive.trycloudflare.com",
+      "base_url": "https://plain-state-refers-nutritional.trycloudflare.com",
       "robust_mode": true
     },
     "tests": {
       "robust_connectivity": {
         "timestamp": "2025-10-06T18:31:30.937199+00:00",
         "robust_mode": true,
-        "base_url": "https://wonder-sufficiently-generator-click.trycloudflare.com",
+        "base_url": "https://plain-state-refers-nutritional.trycloudflare.com",
         "connectivity": "error",
         "details": {
           "error": "tuple indices must be integers or slices, not str"

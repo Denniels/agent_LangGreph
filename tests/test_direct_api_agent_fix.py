@@ -22,7 +22,7 @@ def test_direct_api_agent_corrected():
     print("=" * 50)
     
     # URL actual que funciona
-    api_url = "https://wonder-sufficiently-generator-click.trycloudflare.com"
+    api_url = "https://plain-state-refers-nutritional.trycloudflare.com"
     
     try:
         # Crear agente

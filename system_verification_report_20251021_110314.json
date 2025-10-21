@@ -1,0 +1,48 @@
+{
+  "timestamp": "2025-10-21T11:03:14.600468",
+  "system_status": "DEGRADED",
+  "test_results": {
+    "imports": {
+      "status": "PASS",
+      "description": "Verificación de imports del sistema"
+    },
+    "connector": {
+      "status": "FAIL",
+      "description": "Verificación del conector ultra-robusto",
+      "data": {}
+    },
+    "agent": {
+      "status": "FAIL",
+      "description": "Verificación del agente ultra-robusto",
+      "response_length": 0
+    },
+    "report_generator": {
+      "status": "PASS",
+      "description": "Verificación del generador de reportes ejecutivos",
+      "sections": [
+        "metadata",
+        "executive_summary",
+        "technical_analysis",
+        "performance_metrics",
+        "trend_analysis",
+        "recommendations",
+        "visualizations",
+        "appendices"
+      ]
+    },
+    "streamlit_app": {
+      "status": "PASS",
+      "description": "Verificación de la aplicación Streamlit"
+    }
+  },
+  "summary": {
+    "message": "Sistema con degradación (3/5 tests pasados)",
+    "success_rate": 60.0,
+    "passed_tests": 3,
+    "total_tests": 5
+  },
+  "recommendations": [
+    "❌ NO proceder con deployment",
+    "🔧 Resolver problemas críticos identificados"
+  ]
+}

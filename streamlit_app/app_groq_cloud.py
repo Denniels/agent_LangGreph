@@ -31,7 +31,7 @@ st.set_page_config(
 
 # Variables de entorno
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-JETSON_API_URL = "https://wonder-sufficiently-generator-click.trycloudflare.com"
+JETSON_API_URL = "https://plain-state-refers-nutritional.trycloudflare.com"
 
 # CACHE AGRESIVO para módulos pesados
 @st.cache_resource(show_spinner="🔄 Cargando módulos...")
@@ -444,7 +444,7 @@ def display_chat_interface():
                             
                             # Usar DirectAPIAgent directamente para obtener más datos
                             from modules.agents.direct_api_agent import DirectAPIAgent
-                            base_url = "https://wonder-sufficiently-generator-click.trycloudflare.com"
+                            base_url = "https://plain-state-refers-nutritional.trycloudflare.com"
                             direct_agent = DirectAPIAgent(base_url=base_url)
                             
                             # Obtener datos con la configuración temporal actual

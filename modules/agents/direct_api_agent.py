@@ -498,7 +498,7 @@ def create_direct_api_agent(base_url: str = None) -> DirectAPIAgent:
     """
     if not base_url:
         # Usar la misma URL que funciona en el frontend
-        base_url = "https://wonder-sufficiently-generator-click.trycloudflare.com"
+        base_url = "https://plain-state-refers-nutritional.trycloudflare.com"
     
     return DirectAPIAgent(base_url)
 

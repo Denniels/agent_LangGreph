@@ -37,7 +37,7 @@ git push origin main
 
 ```toml
 GROQ_API_KEY = "gsk_TU_API_KEY_REAL_AQUI"
-JETSON_API_URL = "https://dependent-discussions-venice-filling.trycloudflare.com"
+JETSON_API_URL = "https://plain-state-refers-nutritional.trycloudflare.com"
 ```
 
 5. **¡IMPORTANTE!** Reemplaza `TU_API_KEY_REAL_AQUI` con tu API key de Groq

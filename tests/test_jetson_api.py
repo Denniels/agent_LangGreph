@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 # URL base de la API
-API_BASE_URL = "https://wonder-sufficiently-generator-click.trycloudflare.com"
+API_BASE_URL = "https://plain-state-refers-nutritional.trycloudflare.com"
 
 def test_api_connectivity():
     """Test básico de conectividad"""

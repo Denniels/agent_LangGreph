@@ -32,7 +32,7 @@
 
 ```toml
 GROQ_API_KEY = "TU_API_KEY_DE_GROQ_AQUI"
-JETSON_API_URL = "https://wonder-sufficiently-generator-click.trycloudflare.com"
+JETSON_API_URL = "https://plain-state-refers-nutritional.trycloudflare.com"
 ```
 
 5. **¡IMPORTANTE!** Reemplaza `TU_API_KEY_DE_GROQ_AQUI` con tu API key real

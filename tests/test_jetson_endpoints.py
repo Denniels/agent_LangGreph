@@ -7,7 +7,7 @@ import requests
 import json
 from datetime import datetime
 
-API_BASE_URL = "https://wonder-sufficiently-generator-click.trycloudflare.com"
+API_BASE_URL = "https://plain-state-refers-nutritional.trycloudflare.com"
 
 def test_working_endpoints():
     """Probar los endpoints que sabemos que funcionan"""

@@ -36,7 +36,7 @@ def test_direct_api_calls():
     """Probar llamadas directas a la API sin el conector del agente"""
     print_separator("PRUEBAS DIRECTAS A LA API JETSON")
     
-    base_url = "https://wonder-sufficiently-generator-click.trycloudflare.com"
+    base_url = "https://plain-state-refers-nutritional.trycloudflare.com"
     session = requests.Session()
     session.timeout = 10
     

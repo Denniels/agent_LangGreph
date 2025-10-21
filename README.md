@@ -96,7 +96,7 @@ pip install -r requirements.txt
 ```bash
 # Crear archivo .env
 echo "GROQ_API_KEY=tu_api_key_aqui" > .env
-echo "JETSON_API_URL=https://wonder-sufficiently-generator-click.trycloudflare.com" >> .env
+echo "JETSON_API_URL=https://plain-state-refers-nutritional.trycloudflare.com" >> .env
 ```
 
 5. **Ejecutar la aplicación**

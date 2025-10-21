@@ -3,7 +3,7 @@
 
 import requests
 
-url = "https://wonder-sufficiently-generator-click.trycloudflare.com"
+url = "https://plain-state-refers-nutritional.trycloudflare.com"
 
 print(f"🔍 DIAGNOSTICO DETALLADO: {url}")
 
