@@ -1,6 +1,6 @@
 import requests
 
-base_url = 'https://respect-craps-lit-aged.trycloudflare.com'
+base_url = 'https://wonder-sufficiently-generator-click.trycloudflare.com'
 device_id = 'esp32_wifi_001'
 
 print('🔍 Probando diferentes límites para encontrar el máximo:')

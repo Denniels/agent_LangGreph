@@ -22,7 +22,7 @@ st.set_page_config(
 
 # Variables de entorno
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-JETSON_API_URL = "https://respect-craps-lit-aged.trycloudflare.com"
+JETSON_API_URL = "https://wonder-sufficiently-generator-click.trycloudflare.com"
 
 # Cache para imports pesados
 @st.cache_resource

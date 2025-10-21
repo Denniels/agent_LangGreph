@@ -1,7 +1,7 @@
 import requests
 import json
 
-base_url = 'https://respect-craps-lit-aged.trycloudflare.com'
+base_url = 'https://wonder-sufficiently-generator-click.trycloudflare.com'
 
 print('🎯 VERIFICANDO SOLUCIÓN ENCONTRADA')
 print('=' * 50)

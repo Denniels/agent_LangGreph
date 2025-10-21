@@ -2,7 +2,7 @@ import requests
 import json
 import time
 
-base_url = 'https://respect-craps-lit-aged.trycloudflare.com'
+base_url = 'https://wonder-sufficiently-generator-click.trycloudflare.com'
 
 print('🔍 INVESTIGACIÓN PROFUNDA DE LÍMITES DE API')
 print('=' * 60)
