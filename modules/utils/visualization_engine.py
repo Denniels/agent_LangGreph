@@ -530,3 +530,6 @@ class IoTVisualizationEngine:
 def create_visualization_engine() -> IoTVisualizationEngine:
     """Crear instancia del motor de visualización"""
     return IoTVisualizationEngine()
+
+# Alias para compatibilidad
+VisualizationEngine = IoTVisualizationEngine

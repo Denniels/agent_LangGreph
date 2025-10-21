@@ -279,7 +279,7 @@ class AnalysisTools:
         # Recomendaciones basadas en tendencias
         if 'by_sensor_type' in sensor_analysis:
             for sensor_type, analysis in sensor_analysis['by_sensor_type'].items():
-                if analysis.get('trend') == 'increasing' and sensor_type in ['temperature', 'humidity']:
+                if analysis.get('trend') == 'increasing' and sensor_type in ['temperature', 'ldr']:
                     recommendations.append(f"Tendencia creciente en {sensor_type}. Monitorear de cerca.")
         
         if not recommendations:

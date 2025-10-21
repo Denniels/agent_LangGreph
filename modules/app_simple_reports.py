@@ -79,7 +79,7 @@ def render_simple_report_interface():
                     mock_response = {
                         'data_summary': {
                             'total_records': 80,
-                            'sensors': ['temperature', 'humidity', 'ldr'],
+                            'sensors': ['temperature', 'ldr'],
                             'devices': ['esp32_wifi_001', 'arduino_eth_001']
                         },
                         'model_used': 'llama-3.1-8b-instant',
@@ -142,7 +142,7 @@ def render_simple_report_interface():
                         
                         st.success(f"✅ **Reporte generado exitosamente!**")
                         st.info(f"📄 **Archivo:** {filename}")
-                        st.info(f"📊 **Tamaño:** {len(file_bytes):,} bytes")
+                        st.info(f"📊 **Tamaño:** {len(file_bytes):} bytes")
                         st.info(f"🗂️ **Formato:** {format_type.upper()}")
                         
                         # Botón de descarga inmediato
@@ -187,7 +187,7 @@ def render_previous_reports():
                     
                     with col1:
                         st.write(f"**Archivo:** {report_data['filename']}")
-                        st.write(f"**Tamaño:** {len(report_data['bytes']):,} bytes")
+                        st.write(f"**Tamaño:** {len(report_data['bytes']):} bytes")
                         st.write(f"**Formato:** {report_data['mime_type']}")
                         st.write(f"**Creado:** {report_data['created_at'].strftime('%Y-%m-%d %H:%M:%S')}")
                     
