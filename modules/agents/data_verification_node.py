@@ -108,15 +108,17 @@ class DataVerificationNode:
         hallucinations = []
         response_lower = response_text.lower()
         
-        # Palabras clave que indican sensores inexistentes
+        # Palabras clave que indican sensores inexistentes en nuestro hardware
+        # HARDWARE REAL: Solo tenemos sensores de temperatura (NTC/thermistores) y LDR (luminosidad)
         forbidden_keywords = {
             'humedad': ['humedad', 'humidity', 'hum_', '%rh'],
             'presion': ['presión', 'pressure', 'hpa', 'bar', 'atm'],
             'movimiento': ['movimiento', 'motion', 'pir'],
             'sonido': ['sonido', 'sound', 'ruido', 'db', 'decibel'],
             'co2': ['co2', 'dióxido', 'carbono'],
-            'ph': ['ph', 'acidez', 'alcalinidad'],
-            'flujo': ['flujo', 'flow', 'caudal']
+            'ph': ['ph', 'acidez', 'alcalinidad'],  
+            'flujo': ['flujo', 'flow', 'caudal'],
+            'voltaje': ['voltage', 'voltaje', 'volt', 'v']
         }
         
         for category, keywords in forbidden_keywords.items():

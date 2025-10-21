@@ -161,7 +161,7 @@ class GroqIntegration:
             💡 **Recomendación**: Verificar conectividad de red y reintenta la consulta
             """
         
-        elif any(sensor in prompt.lower() for sensor in ["humedad", "humidity", "movimiento", "presión", "co2", "ph"]):
+        elif any(sensor in prompt.lower() for sensor in ["humedad", "humidity", "movimiento", "presión", "co2", "ph", "voltage", "voltaje"]):
             return """
             ❌ **Sensor No Disponible**
             
@@ -215,5 +215,5 @@ if __name__ == "__main__":
     print(f"Test de conexión: {test_result}")
     
     if test_result['success']:
-        response = groq.generate_response("Analiza estos datos de sensores: temp=25°C, humidity=60%")
+        response = groq.generate_response("Analiza estos datos de sensores reales: temp=25°C, ldr=85%")
         print(f"Respuesta: {response}")

@@ -343,8 +343,9 @@ class RemoteLangGraphNodes:
             
             logger.info(f"🔍 Sensores reales detectados: {real_sensor_types}")
             
-            # Lista de sensores que NO existen
-            prohibited_sensors = ['humidity', 'humedad', 'pressure', 'presion', 'motion', 'movimiento']
+            # Lista de sensores que NO existen en nuestro hardware real
+            # HARDWARE REAL: Solo temperatura (NTC/thermistores) + LDR (luminosidad)
+            prohibited_sensors = ['humidity', 'humedad', 'pressure', 'presion', 'motion', 'movimiento', 'co2', 'voltage', 'voltaje']
             
             # Verificar alucinaciones
             hallucinations_found = []

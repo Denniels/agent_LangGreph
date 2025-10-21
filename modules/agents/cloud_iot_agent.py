@@ -883,11 +883,12 @@ Los gráficos han sido guardados y están disponibles para análisis visual de l
                 "timestamp": datetime.now().isoformat()
             }
             
-            # Detectar sensores mencionados que no existen
-            problematic_sensors = ["humidity", "humedad", "pressure", "presión"]
+            # Detectar sensores mencionados que no existen en el hardware real
+            # SOLO tenemos: temperatura (NTC/thermistores) y LDR (luminosidad)
+            problematic_sensors = ["humidity", "humedad", "pressure", "presión", "co2", "voltage", "voltaje", "motion", "movimiento"]
             for sensor in problematic_sensors:
                 if sensor.lower() in response.lower() and sensor not in real_sensors:
-                    verification["hallucinations_detected"].append(f"Sensor inexistente: {sensor}")
+                    verification["hallucinations_detected"].append(f"Sensor inexistente mencionado: {sensor} - Solo tenemos temperatura y LDR")
                     verification["confidence"] -= 0.2
             
             # Ajustar status basado en confianza
