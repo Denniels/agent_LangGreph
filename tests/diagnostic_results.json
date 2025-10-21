@@ -1,7 +1,7 @@
 {
   "timestamp": "2025-10-06T15:36:11.634186",
   "api_results": {
-    "base_url": "https://respect-craps-lit-aged.trycloudflare.com",
+    "base_url": "https://wonder-sufficiently-generator-click.trycloudflare.com",
     "tests": {
       "health": {
         "status_code": 200,
@@ -41,7 +41,7 @@
       "robust_connectivity": {
         "timestamp": "2025-10-06T18:31:30.937199+00:00",
         "robust_mode": true,
-        "base_url": "https://respect-craps-lit-aged.trycloudflare.com",
+        "base_url": "https://wonder-sufficiently-generator-click.trycloudflare.com",
         "connectivity": "error",
         "details": {
           "error": "tuple indices must be integers or slices, not str"

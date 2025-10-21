@@ -7,7 +7,7 @@ import json
 
 def test_jetson_connectivity():
     """Probar conectividad completa con Jetson API"""
-    base_url = "https://respect-craps-lit-aged.trycloudflare.com"
+    base_url = "https://wonder-sufficiently-generator-click.trycloudflare.com"
     
     print("=== VERIFICACION DE CONECTIVIDAD JETSON API ===")
     print(f"URL Base: {base_url}")

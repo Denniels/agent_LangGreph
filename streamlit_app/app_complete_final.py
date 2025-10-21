@@ -34,7 +34,7 @@ st.set_page_config(
 
 # Variables de entorno
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-JETSON_API_URL = "https://respect-craps-lit-aged.trycloudflare.com"
+JETSON_API_URL = "https://wonder-sufficiently-generator-click.trycloudflare.com"
 
 # Agregar path del proyecto
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -20,7 +20,7 @@ if not os.getenv('GROQ_API_KEY'):
     print("⚠️ GROQ_API_KEY debe configurarse en Streamlit Cloud Secrets")
 
 if not os.getenv('JETSON_API_URL'):
-    os.environ['JETSON_API_URL'] = 'https://respect-craps-lit-aged.trycloudflare.com'
+    os.environ['JETSON_API_URL'] = 'https://wonder-sufficiently-generator-click.trycloudflare.com'
 
 # EJECUTAR APLICACIÓN PRINCIPAL
 if __name__ == "__main__":
