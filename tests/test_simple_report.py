@@ -27,7 +27,7 @@ def test_report_generation_simple():
         context_metadata = {
             'data_summary': {
                 'total_records': 80,
-                'sensors': ['temperature', 'humidity', 'ldr'],
+                'sensors': ['temperature', 'ldr'],
                 'devices': ['esp32_wifi_001', 'arduino_eth_001']
             },
             'model_used': 'llama-3.1-8b-instant',
@@ -54,7 +54,7 @@ def test_report_generation_simple():
         
         print(f"✅ Reporte generado exitosamente!")
         print(f"📄 Archivo: {filename}")
-        print(f"📊 Tamaño: {len(file_bytes):,} bytes")
+        print(f"📊 Tamaño: {len(file_bytes):} bytes")
         
         # Guardar archivo para verificar
         with open(f"test_{filename}", "wb") as f:
@@ -77,7 +77,7 @@ if __name__ == "__main__":
         print(f"\n🎉 ¡Test exitoso!")
         print(f"✅ El sistema de reportes funciona correctamente")
         print(f"📁 Archivo generado: {filename}")
-        print(f"📊 Tamaño: {size:,} bytes")
+        print(f"📊 Tamaño: {size:} bytes")
     else:
         print(f"\n❌ El test falló")
         print(f"🔧 Revisa los errores arriba para diagnosticar el problema")

@@ -15,7 +15,6 @@ from unittest.mock import Mock, AsyncMock, patch
 root_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(root_dir))
 
-
 @pytest.fixture(scope="session")
 def event_loop():
     """
@@ -25,7 +24,6 @@ def event_loop():
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
-
 
 @pytest.fixture(autouse=True)
 def setup_test_environment(monkeypatch):
@@ -41,7 +39,6 @@ def setup_test_environment(monkeypatch):
     monkeypatch.setenv("DB_PASSWORD", "test_password")
     monkeypatch.setenv("OPENAI_API_KEY", "test_api_key")
     monkeypatch.setenv("LOG_LEVEL", "ERROR")  # Silenciar logs en tests
-
 
 @pytest.fixture
 def db_connector():
@@ -59,7 +56,6 @@ def db_connector():
     mock_instance.execute_query.return_value = []
     
     return mock_instance
-
 
 @pytest.fixture
 def iot_agent():
@@ -82,7 +78,6 @@ def iot_agent():
     
     return mock_instance
 
-
 @pytest.fixture
 def db_tools():
     """Fixture mock para DatabaseTools."""
@@ -98,7 +93,6 @@ def db_tools():
     mock_instance.create_alert_tool = AsyncMock(return_value=True)
     
     return mock_instance
-
 
 @pytest.fixture
 def sample_device_data():
@@ -146,7 +140,6 @@ def sample_device_data():
             "updated_at": base_time - timedelta(minutes=1)
         }
     ]
-
 
 @pytest.fixture
 def sample_sensor_data():
@@ -199,7 +192,6 @@ def sample_sensor_data():
     
     return data
 
-
 @pytest.fixture
 def sample_system_events():
     """
@@ -244,7 +236,6 @@ def sample_system_events():
         }
     ]
 
-
 @pytest.fixture
 def sample_alert_data():
     """
@@ -269,7 +260,7 @@ def sample_alert_data():
             "alert_id": 2,
             "device_id": "HUM_001",
             "alert_type": "high_humidity",
-            "message": "Humidity levels too high: 80%",
+            
             "severity": "medium",
             "status": "active",
             "created_at": base_time - timedelta(hours=1),
@@ -286,7 +277,6 @@ def sample_alert_data():
             "resolved_at": base_time - timedelta(hours=3)
         }
     ]
-
 
 # Configuración de pytest
 def pytest_configure(config):
@@ -306,7 +296,6 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "agent: marks tests related to agent functionality"
     )
-
 
 def pytest_collection_modifyitems(config, items):
     """

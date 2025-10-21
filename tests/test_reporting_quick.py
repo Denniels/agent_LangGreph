@@ -28,7 +28,7 @@ def test_reporting_system():
     
     # Metadata de ejemplo
     context_metadata = {
-        'esp32': {'temperature': 'Temperatura ESP32', 'humidity': 'Humedad ESP32'},
+        'esp32': {'temperature': 'Temperatura ESP32', ,
         'arduino_ethernet': {'temperature': 'Temperatura Arduino', 'ldr': 'Sensor LDR'}
     }
     

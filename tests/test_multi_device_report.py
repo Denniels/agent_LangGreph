@@ -27,7 +27,7 @@ def test_multi_device_report():
         context_metadata = {
             'data_summary': {
                 'total_records': 150,
-                'sensors': ['temperature', 'humidity', 'ldr'],
+                'sensors': ['temperature', 'ldr'],
                 'devices': ['esp32_wifi_001', 'arduino_eth_001']
             },
             'model_used': 'llama-3.1-8b-instant',
@@ -68,7 +68,7 @@ def test_multi_device_report():
         
         print(f"✅ Reporte generado exitosamente!")
         print(f"📄 Archivo: {filename}")
-        print(f"📊 Tamaño: {len(file_bytes):,} bytes")
+        print(f"📊 Tamaño: {len(file_bytes):} bytes")
         
         # Guardar archivo para verificar
         with open(f"test_multi_{filename}", "wb") as f:
@@ -97,7 +97,7 @@ if __name__ == "__main__":
         print(f"\n🎉 ¡Test exitoso!")
         print(f"✅ El sistema de reportes multi-dispositivo funciona")
         print(f"📁 Archivo generado: {filename}")
-        print(f"📊 Tamaño: {size:,} bytes")
+        print(f"📊 Tamaño: {size:} bytes")
         print(f"\n🔍 Revisa el archivo generado para verificar que contenga:")
         print(f"   - Múltiples dispositivos (ESP32 y Arduino)")
         print(f"   - Múltiples sensores (temperatura, LDR)")
