@@ -34,7 +34,7 @@ st.set_page_config(
 
 # Variables de entorno
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-JETSON_API_URL = "https://plain-state-refers-nutritional.trycloudflare.com"
+JETSON_API_URL = "https://replica-subscriber-permission-restricted.trycloudflare.com"
 
 # Agregar path del proyecto
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -7,7 +7,7 @@ import json
 
 def debug_api_format():
     """Revisar el formato real de la API"""
-    base_url = "https://plain-state-refers-nutritional.trycloudflare.com"
+    base_url = "https://replica-subscriber-permission-restricted.trycloudflare.com"
     
     print("🔍 DIAGNÓSTICO DIRECTO DE LA API")
     print("=" * 50)

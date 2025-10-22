@@ -54,7 +54,7 @@ def test_connector():
         from modules.tools.ultra_robust_connector import UltraRobustJetsonConnector
         
         # Inicializar conector con URL actual
-        base_url = "https://plain-state-refers-nutritional.trycloudflare.com"
+        base_url = "https://replica-subscriber-permission-restricted.trycloudflare.com"
         connector = UltraRobustJetsonConnector(base_url)
         print("✅ Conector inicializado correctamente")
         
@@ -102,7 +102,7 @@ def test_agent():
         from modules.utils.visualization_engine import VisualizationEngine
         
         # Inicializar componentes
-        base_url = "https://plain-state-refers-nutritional.trycloudflare.com"
+        base_url = "https://replica-subscriber-permission-restricted.trycloudflare.com"
         connector = UltraRobustJetsonConnector(base_url)
         visualization_engine = VisualizationEngine()
         agent = UltraRobustIoTAgent(connector, visualization_engine)
@@ -145,7 +145,7 @@ def test_report_generator():
         from modules.utils.visualization_engine import VisualizationEngine
         
         # Inicializar componentes
-        base_url = "https://plain-state-refers-nutritional.trycloudflare.com"
+        base_url = "https://replica-subscriber-permission-restricted.trycloudflare.com"
         connector = UltraRobustJetsonConnector(base_url)
         visualization_engine = VisualizationEngine()
         report_generator = ExecutiveReportGenerator(connector, visualization_engine)

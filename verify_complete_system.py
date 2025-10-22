@@ -31,7 +31,7 @@ def test_pagination_system():
     print("\n📚 VERIFICANDO SISTEMA DE PAGINACIÓN...")
     
     try:
-        base_url = "https://plain-state-refers-nutritional.trycloudflare.com"
+        base_url = "https://replica-subscriber-permission-restricted.trycloudflare.com"
         agent = DirectAPIAgent(base_url=base_url)
         
         # Test consulta corta (debería usar método estándar)

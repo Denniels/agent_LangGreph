@@ -26,7 +26,7 @@ En la configuración de tu app en Streamlit Cloud, ve a **"Advanced settings"** 
 GROQ_API_KEY = "tu_nueva_api_key_de_groq_aqui"
 
 # OPCIONAL: URL de la API Jetson (usa default si no se especifica)
-JETSON_API_URL = "https://dpi-opportunity-hybrid-manufacturer.trycloudflare.com"
+JETSON_API_URL = "https://replica-subscriber-permission-restricted.trycloudflare.com"
 
 # OPCIONAL: Configuraciones adicionales
 ENVIRONMENT = "production"

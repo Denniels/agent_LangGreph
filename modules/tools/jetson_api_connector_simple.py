@@ -251,7 +251,7 @@ def create_jetson_connector(url: str = None) -> JetsonAPIConnector:
         Instancia de JetsonAPIConnector
     """
     if not url:
-        url = "https://plain-state-refers-nutritional.trycloudflare.com"
+        url = "https://replica-subscriber-permission-restricted.trycloudflare.com"
     
     return JetsonAPIConnector(url)
 

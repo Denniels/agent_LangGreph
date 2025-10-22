@@ -2,7 +2,7 @@ import requests
 import json
 import time
 
-base_url = 'https://plain-state-refers-nutritional.trycloudflare.com'
+base_url = 'https://replica-subscriber-permission-restricted.trycloudflare.com'
 
 print('🔍 INVESTIGACIÓN PROFUNDA DE LÍMITES DE API')
 print('=' * 60)

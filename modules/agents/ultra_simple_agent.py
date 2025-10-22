@@ -163,7 +163,7 @@ if __name__ == "__main__":
     print("🧪 Test UltraSimpleAgent...")
     
     # Crear connector con misma configuración del frontend
-    connector = JetsonAPIConnector("https://plain-state-refers-nutritional.trycloudflare.com")
+    connector = JetsonAPIConnector("https://replica-subscriber-permission-restricted.trycloudflare.com")
     
     # Crear agente
     agent = create_ultra_simple_agent(connector)

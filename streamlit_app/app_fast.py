@@ -22,7 +22,7 @@ st.set_page_config(
 
 # Variables de entorno
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-JETSON_API_URL = "https://plain-state-refers-nutritional.trycloudflare.com"
+JETSON_API_URL = "https://replica-subscriber-permission-restricted.trycloudflare.com"
 
 # Cache para imports pesados
 @st.cache_resource

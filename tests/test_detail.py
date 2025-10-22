@@ -3,7 +3,7 @@
 
 import requests
 
-url = "https://plain-state-refers-nutritional.trycloudflare.com"
+url = "https://replica-subscriber-permission-restricted.trycloudflare.com"
 
 print(f"🔍 DIAGNOSTICO DETALLADO: {url}")
 

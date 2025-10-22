@@ -37,7 +37,7 @@ class SimpleCloudIoTAgent:
         self.groq_model = groq_model
         self.jetson_api_url = jetson_api_url or os.getenv(
             "JETSON_API_URL", 
-            "https://plain-state-refers-nutritional.trycloudflare.com"
+            "https://replica-subscriber-permission-restricted.trycloudflare.com"
         )
         
         # Inicializar componentes

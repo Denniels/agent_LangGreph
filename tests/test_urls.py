@@ -4,7 +4,7 @@
 import requests
 
 urls = [
-    "https://plain-state-refers-nutritional.trycloudflare.com"
+    "https://replica-subscriber-permission-restricted.trycloudflare.com"
 ]
 
 for url in urls:

@@ -1,0 +1,10 @@
+{
+  "last_known_url": "https://replica-subscriber-permission-restricted.trycloudflare.com",
+  "auto_commit": false,
+  "auto_push": false,
+  "monitor_interval": 300,
+  "backup_enabled": true,
+  "notification_enabled": true,
+  "excluded_files": [],
+  "update_history": []
+}

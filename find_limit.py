@@ -1,6 +1,6 @@
 import requests
 
-base_url = 'https://plain-state-refers-nutritional.trycloudflare.com'
+base_url = 'https://replica-subscriber-permission-restricted.trycloudflare.com'
 device_id = 'esp32_wifi_001'
 
 print('🔍 Probando diferentes límites para encontrar el máximo:')

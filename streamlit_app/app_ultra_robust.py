@@ -41,7 +41,7 @@ def load_ultra_robust_system():
         from modules.utils.visualization_engine import VisualizationEngine
         
         # Inicializar componentes con URL actual
-        base_url = "https://plain-state-refers-nutritional.trycloudflare.com"
+        base_url = "https://replica-subscriber-permission-restricted.trycloudflare.com"
         connector = UltraRobustJetsonConnector(base_url)
         visualization_engine = VisualizationEngine()
         agent = UltraRobustIoTAgent(connector, visualization_engine)
@@ -77,7 +77,7 @@ def get_system_status():
     try:
         # Verificar conectividad
         from modules.tools.ultra_robust_connector import UltraRobustJetsonConnector
-        base_url = "https://plain-state-refers-nutritional.trycloudflare.com"
+        base_url = "https://replica-subscriber-permission-restricted.trycloudflare.com"
         connector = UltraRobustJetsonConnector(base_url)
         test_data = connector.get_devices_robust()
         device_count = len(test_data) if test_data else 0

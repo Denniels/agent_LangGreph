@@ -16,7 +16,7 @@ def verify_real_sensors():
     
     try:
         # Obtener datos directos de la API
-        url = "https://plain-state-refers-nutritional.trycloudflare.com/data?hours=1"
+        url = "https://replica-subscriber-permission-restricted.trycloudflare.com/data?hours=1"
         response = requests.get(url, timeout=10)
         
         if response.status_code != 200:

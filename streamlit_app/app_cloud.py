@@ -151,9 +151,11 @@ class StreamlitCloudApp:
                 st.error("❌ HUGGINGFACE_API_TOKEN faltante")
                 st.info("Configura tu token de HuggingFace en Streamlit Cloud Secrets")
             
-            # Jetson URL
-            jetson_url = os.getenv("JETSON_API_URL", "https://plain-state-refers-nutritional.trycloudflare.com")
+            # Jetson URL - Usando sistema automático de URLs
+            from modules.utils.jetson_url_config import get_jetson_url_for_env
+            jetson_url = get_jetson_url_for_env()
             st.info(f"🔗 Jetson API: {jetson_url}")
+            st.caption("💡 URL se actualiza automáticamente cuando Cloudflare cambia")
             
             # Modelo de HuggingFace
             st.subheader("🤖 Configuración del Modelo")
@@ -531,7 +533,9 @@ class StreamlitCloudApp:
         # Configuración de conexión
         st.subheader("🔗 Configuración de Conexión")
         
-        jetson_url = os.getenv("JETSON_API_URL", "https://plain-state-refers-nutritional.trycloudflare.com")
+        # Usar sistema automático de URLs
+        from modules.utils.jetson_url_config import get_jetson_url_for_env
+        jetson_url = get_jetson_url_for_env()
         
         col1, col2 = st.columns(2)
         
