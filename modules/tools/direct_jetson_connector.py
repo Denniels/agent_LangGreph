@@ -142,10 +142,10 @@ class DirectJetsonConnector:
     
     def get_all_data_simple(self) -> Dict[str, Any]:
         """
-        Método simple que obtiene TODO igual que el dashboard
+        Método CORREGIDO que obtiene datos usando el endpoint /data general que SÍ funciona
         """
         try:
-            logger.info("🚀 Iniciando obtención completa de datos...")
+            logger.info("🚀 Iniciando obtención completa de datos (MÉTODO CORREGIDO)...")
             
             # 1. Test de conexión
             connection_test = self.test_connection()
@@ -155,21 +155,18 @@ class DirectJetsonConnector:
             # 2. Obtener dispositivos
             devices = self.get_devices_direct()
             
-            # 3. Obtener datos de cada dispositivo
-            all_sensor_data = []
-            device_stats = {}
+            # 3. USAR ENDPOINT /data GENERAL EN LUGAR DE POR DISPOSITIVO
+            logger.info("📊 Usando endpoint /data general que SÍ funciona...")
+            all_sensor_data = self.get_sensor_data_direct(device_id=None, limit=200)  # Sin device_id = endpoint general
             
+            # 4. Calcular estadísticas por dispositivo
+            device_stats = {}
             for device in devices:
                 device_id = device.get('device_id')
                 if device_id:
-                    try:
-                        device_data = self.get_sensor_data_direct(device_id, limit=10)
-                        all_sensor_data.extend(device_data)
-                        device_stats[device_id] = len(device_data)
-                        logger.info(f"📱 {device_id}: {len(device_data)} registros")
-                    except Exception as e:
-                        logger.warning(f"⚠️ Error con {device_id}: {e}")
-                        device_stats[device_id] = 0
+                    device_records = [record for record in all_sensor_data if record.get('device_id') == device_id]
+                    device_stats[device_id] = len(device_records)
+                    logger.info(f"📱 {device_id}: {len(device_records)} registros")
             
             result = {
                 "status": "success",
@@ -180,11 +177,12 @@ class DirectJetsonConnector:
                     "total_devices": len(devices),
                     "total_records": len(all_sensor_data),
                     "device_records": device_stats,
+                    "total_sensors": len(set(record.get('sensor_type') for record in all_sensor_data if record.get('sensor_type'))),
                     "timestamp": datetime.now().isoformat()
                 }
             }
             
-            logger.info(f"🎉 Datos completos obtenidos: {len(devices)} dispositivos, {len(all_sensor_data)} registros")
+            logger.info(f"🎉 DATOS CORREGIDOS OBTENIDOS: {len(devices)} dispositivos, {len(all_sensor_data)} registros")
             return result
             
         except Exception as e:

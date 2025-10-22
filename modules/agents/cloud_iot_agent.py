@@ -459,18 +459,9 @@ class CloudIoTAgent:
             # 🧠 ANÁLISIS INTELIGENTE AVANZADO CON SISTEMAS DE IA
             logger.info("🔍 Iniciando validación y sanitización inteligente de datos...")
             
-            # PASO 1: SANITIZACIÓN INTELIGENTE CON SMARTANALYZER
-            processed_data = []
-            if self.intelligence_systems.get('smart_analyzer'):
-                try:
-                    # Usar SmartAnalyzer para validación y limpieza avanzada
-                    processed_data = self.intelligence_systems['smart_analyzer'].validate_and_clean_data(raw_data)
-                    logger.info(f"🧠 SmartAnalyzer procesó: {len(processed_data)}/{len(raw_data)} registros válidos")
-                except Exception as e:
-                    logger.warning(f"⚠️ SmartAnalyzer falló, usando sanitización básica: {e}")
-                    processed_data = self._basic_data_sanitization(raw_data)
-            else:
-                processed_data = self._basic_data_sanitization(raw_data)
+            # PASO 1: SANITIZACIÓN INTELIGENTE (MÉTODO SIMPLIFICADO)
+            processed_data = self._basic_data_sanitization(raw_data)
+            logger.info(f"🧠 Datos procesados: {len(processed_data)}/{len(raw_data)} registros válidos")
             
             # Si no hay datos válidos después de la sanitización
             if not processed_data:
@@ -787,6 +778,7 @@ RESPUESTA CONVERSACIONAL:
             usage_info = usage_tracker.track_request(self.groq_model, estimated_tokens)
             
             # Agregar información de uso si está cerca del límite
+            usage_footer = ""
             if usage_info["status"] in ["warning", "critical"]:
                 remaining_percentage = 100 - usage_info["requests_percentage"]
                 usage_footer = f"""
