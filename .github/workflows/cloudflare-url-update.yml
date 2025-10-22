@@ -11,7 +11,7 @@ on:
       force_update:
         description: 'Forzar actualización de URLs'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
   # Ejecutar cuando se detecten cambios en archivos relevantes
@@ -190,7 +190,7 @@ jobs:
         echo "📅 Failed at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
         
         # Aquí se puede agregar notificación a Slack, Discord, etc.
-        # Por ejemplo:
+        # Por ejemplo (requiere configurar SLACK_WEBHOOK_URL en secrets):
         # curl -X POST -H 'Content-type: application/json' \
         #   --data '{"text":"🚨 Cloudflare URL update failed in agent_LangGreph"}' \
-        #   ${{ secrets.SLACK_WEBHOOK_URL }}
+        #   "$SLACK_WEBHOOK_URL"
