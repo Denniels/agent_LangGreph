@@ -26,6 +26,31 @@ from langgraph.checkpoint.memory import MemorySaver
 
 logger = logging.getLogger(__name__)
 
+# 🧠 SISTEMAS DE INTELIGENCIA AVANZADA - INTEGRACIÓN COMPLETA
+try:
+    from modules.intelligence.smart_analyzer import SmartAnalyzer
+    from modules.intelligence.dynamic_sensor_detector import DynamicSensorDetector
+    from modules.intelligence.advanced_report_generator import AdvancedReportGenerator
+    from modules.intelligence.automatic_insights_engine import AutomaticInsightsEngine
+    from modules.intelligence.predictive_analysis_engine import PredictiveAnalysisEngine
+    from modules.intelligence.advanced_visualization_engine import AdvancedVisualizationEngine
+    from modules.intelligence.intelligent_alert_system import IntelligentAlertSystem
+    from modules.intelligence.temporal_comparison_engine import TemporalComparisonEngine
+    INTELLIGENCE_SYSTEMS_AVAILABLE = True
+    logger.info("🧠 SISTEMAS DE INTELIGENCIA AVANZADA CARGADOS EXITOSAMENTE")
+except ImportError as e:
+    INTELLIGENCE_SYSTEMS_AVAILABLE = False
+    logger.error(f"❌ Error cargando sistemas de inteligencia: {e}")
+except Exception as e:
+    INTELLIGENCE_SYSTEMS_AVAILABLE = False
+    logger.error(f"❌ Error inicializando sistemas de inteligencia: {e}")
+
+# LangGraph imports
+from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.memory import MemorySaver
+
+logger = logging.getLogger(__name__)
+
 # Import del motor de visualización
 try:
     from modules.utils.visualization_engine import create_visualization_engine
@@ -74,6 +99,35 @@ class CloudIoTAgent:
             logger.warning(f"Motor de visualización no disponible: {e}")
         except Exception as e:
             logger.error(f"Error inicializando motor de visualización: {e}")
+        
+        # 🧠 INICIALIZAR SISTEMAS DE INTELIGENCIA AVANZADA
+        self.intelligence_systems = {}
+        if INTELLIGENCE_SYSTEMS_AVAILABLE:
+            try:
+                self.intelligence_systems = {
+                    'smart_analyzer': SmartAnalyzer(),
+                    'sensor_detector': DynamicSensorDetector(jetson_api_url=self.jetson_api_url),
+                    'report_generator': AdvancedReportGenerator(jetson_api_url=self.jetson_api_url),
+                    'insights_engine': AutomaticInsightsEngine(jetson_api_url=self.jetson_api_url),
+                    'predictive_engine': PredictiveAnalysisEngine(jetson_api_url=self.jetson_api_url),
+                    'visualization_engine': AdvancedVisualizationEngine(jetson_api_url=self.jetson_api_url),
+                    'alert_system': IntelligentAlertSystem(jetson_api_url=self.jetson_api_url),
+                    'temporal_engine': TemporalComparisonEngine(jetson_api_url=self.jetson_api_url)
+                }
+                logger.info("🧠 SISTEMAS DE INTELIGENCIA AVANZADA INICIALIZADOS")
+                logger.info(f"   📊 SmartAnalyzer: ✅")
+                logger.info(f"   🔍 DynamicSensorDetector: ✅")
+                logger.info(f"   📋 AdvancedReportGenerator: ✅")
+                logger.info(f"   💡 AutomaticInsightsEngine: ✅")
+                logger.info(f"   🔮 PredictiveAnalysisEngine: ✅")
+                logger.info(f"   📈 AdvancedVisualizationEngine: ✅")
+                logger.info(f"   🚨 IntelligentAlertSystem: ✅")
+                logger.info(f"   ⏰ TemporalComparisonEngine: ✅")
+            except Exception as e:
+                logger.error(f"❌ Error inicializando sistemas de inteligencia: {e}")
+                self.intelligence_systems = {}
+        else:
+            logger.warning("⚠️ Sistemas de inteligencia no disponibles - usando análisis básico")
         
         # Estado del agente
         self.is_initialized = False
@@ -309,6 +363,7 @@ class CloudIoTAgent:
                         analysis_hours = 3.0  # Default
                         
                         # Buscar si hay configuración temporal en la consulta
+                        user_query = state.get("user_query", "")
                         if "CONFIGURACIÓN TEMPORAL" in user_query:
                             try:
                                 import re
@@ -362,285 +417,193 @@ class CloudIoTAgent:
     
     async def _data_analyzer_node(self, state: IoTAgentState) -> IoTAgentState:
         """
-        Nodo para analizar los datos recolectados.
+        🧠 NODO DE ANÁLISIS INTELIGENTE - POTENCIADO POR IA Y ML
+        
+        Usa todos los sistemas de inteligencia avanzada implementados:
+        - SmartAnalyzer: Análisis estadístico y detección de anomalías
+        - DynamicSensorDetector: Detección automática de dispositivos
+        - AutomaticInsightsEngine: Generación de insights con IA
+        - PredictiveAnalysisEngine: Predicciones y análisis temporal
+        - IntelligentAlertSystem: Alertas contextuales inteligentes
         
         Args:
             state: Estado actual del agente
             
         Returns:
-            Estado actualizado
+            Estado actualizado con análisis inteligente completo
         """
         try:
-            logger.info("📊 Ejecutando data_analyzer_node (Cloud)")
+            logger.info("🧠 Ejecutando ANÁLISIS INTELIGENTE AVANZADO")
             
             raw_data = state.get("raw_data", [])
+            user_query = state.get("user_query", "")
             
             # Verificar si hay datos disponibles
             if not raw_data:
                 logger.warning("🚨 No hay datos para analizar")
                 
-                # Si hay información de error de Jetson, incluirla
-                if "error" in state:
-                    error_info = state["error"]
-                    state["formatted_data"] = f"""
-🚨 ERROR: No se pudieron obtener datos de sensores
-
-{error_info.get('message', 'Error desconocido')}
-
-📋 INSTRUCCIONES PARA RESOLVER:
-"""
-                    for instruction in error_info.get('instructions', []):
-                        state["formatted_data"] += f"\n{instruction}"
+                # Usar el sistema inteligente de alertas para generar mensaje de error contextual
+                if self.intelligence_systems.get('alert_system'):
+                    try:
+                        error_analysis = self.intelligence_systems['alert_system'].generate_connection_diagnostic()
+                        state["formatted_data"] = error_analysis
+                    except:
+                        state["formatted_data"] = self._generate_fallback_error_message(state)
                 else:
-                    state["formatted_data"] = """
-🚨 ERROR: No hay datos de sensores disponibles
-
-La API de la Jetson no está respondiendo. Por favor:
-
-🔧 Verificar que la Jetson esté encendida y conectada a la red
-📡 Confirmar que los servicios systemd estén ejecutándose:
-   sudo systemctl status iot-api-service
-   sudo systemctl status sensor-collector-service
-🌐 Verificar conectividad de red desde la Jetson
-📋 Revisar logs del sistema: journalctl -u iot-api-service -f
-🔄 Reiniciar servicios si es necesario: sudo systemctl restart iot-api-service
-"""
+                    state["formatted_data"] = self._generate_fallback_error_message(state)
                 
                 state["sensor_summary"] = {}
                 state["analysis"] = {"error": "no_data_available"}
                 return state
             
-            # Análisis optimizado para cloud - CON VALIDACIÓN ROBUSTA
-            analysis = {
-                "total_records": len(raw_data),
-                "devices": set(),
-                "sensors": set(),
-                "latest_readings": {},
-                "timestamp_range": {"start": None, "end": None}
-            }
+            # 🧠 ANÁLISIS INTELIGENTE AVANZADO CON SISTEMAS DE IA
+            logger.info("🔍 Iniciando validación y sanitización inteligente de datos...")
             
-            # 🔧 VALIDACIÓN Y SANITIZACIÓN DE DATOS
+            # PASO 1: SANITIZACIÓN INTELIGENTE CON SMARTANALYZER
             processed_data = []
-            for item in raw_data:
+            if self.intelligence_systems.get('smart_analyzer'):
                 try:
-                    # Verificar que sea un diccionario
-                    if isinstance(item, dict):
-                        # Verificar que tenga los campos mínimos requeridos
-                        if all(key in item for key in ['device_id', 'sensor_type', 'value']):
-                            processed_data.append(item)
-                        else:
-                            logger.warning(f"⚠️ Registro incompleto: {item}")
-                    elif isinstance(item, str):
-                        # Intentar parsear como JSON si es string
-                        import json
-                        try:
-                            parsed_item = json.loads(item)
-                            if isinstance(parsed_item, dict) and all(key in parsed_item for key in ['device_id', 'sensor_type', 'value']):
-                                processed_data.append(parsed_item)
-                            else:
-                                logger.warning(f"⚠️ String JSON inválido: {item[:100]}...")
-                        except json.JSONDecodeError:
-                            logger.warning(f"⚠️ String no es JSON válido: {item[:100]}...")
-                    else:
-                        logger.warning(f"⚠️ Tipo de dato inesperado: {type(item)} - {str(item)[:100]}")
+                    # Usar SmartAnalyzer para validación y limpieza avanzada
+                    processed_data = self.intelligence_systems['smart_analyzer'].validate_and_clean_data(raw_data)
+                    logger.info(f"🧠 SmartAnalyzer procesó: {len(processed_data)}/{len(raw_data)} registros válidos")
                 except Exception as e:
-                    logger.warning(f"⚠️ Error procesando item: {e}")
-            
-            logger.info(f"🔍 Datos sanitizados: {len(processed_data)}/{len(raw_data)} registros válidos")
+                    logger.warning(f"⚠️ SmartAnalyzer falló, usando sanitización básica: {e}")
+                    processed_data = self._basic_data_sanitization(raw_data)
+            else:
+                processed_data = self._basic_data_sanitization(raw_data)
             
             # Si no hay datos válidos después de la sanitización
             if not processed_data:
                 logger.warning("🚨 No hay datos válidos después de la sanitización")
-                state["formatted_data"] = """
-🚨 ERROR: Los datos obtenidos tienen formato incorrecto
-
-Los datos de la API están llegando pero no tienen el formato esperado.
-
-📋 DATOS RECIBIDOS:
-""" + str(raw_data[:3]) + """
-
-🔧 POSIBLES SOLUCIONES:
-📡 Verificar formato de respuesta de la API Jetson
-🔄 Reiniciar servicios de la API: sudo systemctl restart iot-api-service
-🌐 Verificar que la API retorne JSON válido
-"""
+                if self.intelligence_systems.get('alert_system'):
+                    try:
+                        error_analysis = self.intelligence_systems['alert_system'].analyze_data_format_error(raw_data[:3])
+                        state["formatted_data"] = error_analysis
+                    except:
+                        state["formatted_data"] = self._generate_data_format_error(raw_data)
+                else:
+                    state["formatted_data"] = self._generate_data_format_error(raw_data)
+                
                 state["sensor_summary"] = {}
                 state["analysis"] = {"error": "invalid_data_format"}
                 return state
             
-            # Detectar tipos de consultas específicas
-            user_query = state.get("user_query", "").lower()
-            request_specific_count = False
-            request_per_device = False
-            request_by_time = False
-            requested_count = 10  # Default
-            time_value = 0
-            time_unit = ""
+            # PASO 2: ANÁLISIS INTELIGENTE DE CONSULTA CON NLP
+            logger.info("🔍 Analizando tipo de consulta con sistemas inteligentes...")
+            query_analysis = {}
             
-            # Buscar números específicos en la consulta
-            import re
-            from datetime import datetime, timedelta
-            
-            numbers = re.findall(r'\d+', user_query)
-            
-            # DETECCIÓN DE CONSULTAS POR TIEMPO
-            time_keywords = ["minuto", "minutos", "hora", "horas", "min", "hrs"]
-            if numbers and ("últimos" in user_query or "ultimos" in user_query):
-                # Verificar si es consulta por tiempo
-                for keyword in time_keywords:
-                    if keyword in user_query:
-                        request_by_time = True
-                        time_value = int(numbers[0])
-                        time_unit = keyword
-                        logger.info(f"   ⏰ Consulta por TIEMPO detectada: últimos {time_value} {time_unit}")
-                        break
-                
-                # Si no es por tiempo, es por cantidad de registros
-                if not request_by_time:
-                    request_specific_count = True
-                    requested_count = min(int(numbers[0]), 50)  # Máximo 50 para cloud
-                    
-                    # Detectar si pide registros POR DISPOSITIVO
-                    if "cada dispositivo" in user_query or "por dispositivo" in user_query:
-                        request_per_device = True
-                        logger.info(f"   📋 Consulta específica detectada: últimos {requested_count} registros POR DISPOSITIVO")
-                    else:
-                        logger.info(f"   📋 Consulta específica detectada: últimos {requested_count} registros TOTAL")
-            
-            # Procesar datos según el tipo de consulta
-            if request_by_time:
-                # CONSULTAS POR TIEMPO - Filtrar por ventana temporal
-                from datetime import datetime, timedelta
-                import dateutil.parser
-                
-                # Calcular tiempo límite
-                now = datetime.now()
-                if time_unit in ["minuto", "minutos", "min"]:
-                    time_limit = now - timedelta(minutes=time_value)
-                elif time_unit in ["hora", "horas", "hrs"]:
-                    time_limit = now - timedelta(hours=time_value)
-                else:
-                    time_limit = now - timedelta(minutes=time_value)  # Default a minutos
-                
-                logger.info(f"   ⏰ Filtrando datos desde: {time_limit.strftime('%H:%M:%S')}")
-                
-                # Filtrar datos por tiempo para TODOS los dispositivos
-                # USAR DATOS SANITIZADOS como base
-                time_filtered_data = []
-                devices_found = set(record.get("device_id") for record in processed_data)
-                total_in_timeframe = 0
-                
-                for device_id in devices_found:
-                    device_records = [r for r in processed_data if r.get("device_id") == device_id]
-                    device_time_filtered = []
-                    
-                    for record in device_records:
-                        try:
-                            # Parsear timestamp del registro
-                            timestamp_str = record.get("timestamp", "")
-                            if timestamp_str:
-                                # Intentar parsear diferentes formatos de timestamp
-                                try:
-                                    record_time = dateutil.parser.parse(timestamp_str)
-                                    # Convertir a naive datetime si tiene timezone info
-                                    if record_time.tzinfo is not None:
-                                        record_time = record_time.replace(tzinfo=None)
-                                except:
-                                    # Fallback: asumir formato ISO básico
-                                    record_time = datetime.fromisoformat(timestamp_str.replace('Z', '').split('+')[0].split('-03:00')[0])
-                                
-                                # Verificar si está en el rango de tiempo
-                                if record_time >= time_limit:
-                                    device_time_filtered.append(record)
-                        except Exception as e:
-                            logger.warning(f"   ⚠️ Error parseando timestamp {timestamp_str}: {e}")
-                            # Si no se puede parsear, incluir el registro (mejor incluir que excluir)
-                            device_time_filtered.append(record)
-                    
-                    time_filtered_data.extend(device_time_filtered)
-                    total_in_timeframe += len(device_time_filtered)
-                    logger.info(f"   📱 {device_id}: {len(device_time_filtered)} registros en últimos {time_value} {time_unit}")
-                
-                # Actualizar processed_data con los datos filtrados por tiempo
-                processed_data = time_filtered_data
-                logger.info(f"   📊 Procesando {len(processed_data)} registros por TIEMPO ({len(devices_found)} dispositivos)")
-                
-            elif request_specific_count and request_per_device:
-                # Para consultas de "X registros por dispositivo", distribuir equitativamente
-                # USAR DATOS SANITIZADOS como base
-                per_device_data = []
-                devices_found = set(record.get("device_id") for record in processed_data)
-                
-                for device_id in devices_found:
-                    device_records = [r for r in processed_data if r.get("device_id") == device_id]
-                    device_limited = device_records[:requested_count]
-                    per_device_data.extend(device_limited)
-                    logger.info(f"   📱 {device_id}: {len(device_limited)} registros incluidos")
-                
-                # Actualizar processed_data con los datos filtrados por dispositivo
-                processed_data = per_device_data
-                logger.info(f"   📊 Procesando {len(processed_data)} registros específicos ({len(devices_found)} dispositivos)")
-            elif request_specific_count:
-                # Para consultas específicas totales, tomar exactamente la cantidad solicitada
-                # USAR DATOS SANITIZADOS, no raw_data
-                processed_data = processed_data[:requested_count]
-                logger.info(f"   📊 Procesando {len(processed_data)} registros específicos TOTAL")
-            else:
-                # Para análisis general, limitar a 50 registros para cloud  
-                # USAR DATOS SANITIZADOS, no raw_data
-                processed_data = processed_data[:50] if len(processed_data) > 50 else processed_data
-            
-            # Usar los datos sanitizados para el análisis final
-            for record in processed_data:
+            if self.intelligence_systems.get('insights_engine'):
                 try:
-                    # Verificación adicional para asegurar que sea un diccionario
-                    if not isinstance(record, dict):
-                        logger.warning(f"⚠️ Registro no es diccionario: {type(record)}")
-                        continue
-                        
-                    device_id = record.get("device_id", "unknown")
-                    sensor_type = record.get("sensor_type", "unknown") 
-                    value = record.get("value")
-                    timestamp = record.get("timestamp")
-                    
-                    analysis["devices"].add(device_id)
-                    analysis["sensors"].add(sensor_type)
-                    
-                    # Última lectura por sensor
-                    if sensor_type not in analysis["latest_readings"]:
-                        analysis["latest_readings"][sensor_type] = {
-                            "value": value,
-                            "device": device_id,
-                            "timestamp": timestamp
-                        }
+                    # Usar AutomaticInsightsEngine para analizar la consulta
+                    query_analysis = self.intelligence_systems['insights_engine'].analyze_user_query(user_query)
+                    logger.info(f"🧠 AutomaticInsightsEngine analizó la consulta: {query_analysis.get('intent', 'unknown')}")
                 except Exception as e:
-                    logger.warning(f"⚠️ Error procesando registro en análisis: {e}")
-                    continue
+                    logger.warning(f"⚠️ AutomaticInsightsEngine falló, usando análisis básico: {e}")
+                    query_analysis = self._basic_query_analysis(user_query)
+            else:
+                query_analysis = self._basic_query_analysis(user_query)
             
-            # Convertir sets a listas para serialización
-            analysis["devices"] = list(analysis["devices"])
-            analysis["sensors"] = list(analysis["sensors"])
+            # PASO 3: DETECCIÓN DINÁMICA DE SENSORES Y DISPOSITIVOS
+            logger.info("🔍 Detectando dispositivos y sensores dinámicamente...")
+            device_analysis = {}
             
-            # Formatear datos para el modelo
-            is_direct_query = any(keyword in state["user_query"].lower() for keyword in 
-                                  ["últimos", "ultimos", "listar", "mostrar", "dame", "dime"])
+            if self.intelligence_systems.get('sensor_detector'):
+                try:
+                    # Usar DynamicSensorDetector para análisis automático
+                    device_analysis = self.intelligence_systems['sensor_detector'].analyze_devices_and_sensors(processed_data)
+                    logger.info(f"🧠 DynamicSensorDetector encontró: {device_analysis.get('total_devices', 0)} dispositivos, {device_analysis.get('total_sensors', 0)} tipos de sensores")
+                except Exception as e:
+                    logger.warning(f"⚠️ DynamicSensorDetector falló, usando detección básica: {e}")
+                    device_analysis = self._basic_device_analysis(processed_data)
+            else:
+                device_analysis = self._basic_device_analysis(processed_data)
             
-            # Información adicional para el formateo
-            query_info = {
-                "is_time_query": request_by_time,
-                "time_value": time_value if request_by_time else None,
-                "time_unit": time_unit if request_by_time else None,
-                "is_per_device": request_per_device,
-                "is_count_query": request_specific_count
+            # PASO 4: ANÁLISIS ESTADÍSTICO AVANZADO CON ML
+            logger.info("📊 Ejecutando análisis estadístico avanzado...")
+            statistical_analysis = {}
+            
+            if self.intelligence_systems.get('smart_analyzer'):
+                try:
+                    # Usar SmartAnalyzer para análisis estadístico completo
+                    statistical_analysis = self.intelligence_systems['smart_analyzer'].perform_comprehensive_analysis(
+                        processed_data, query_analysis, device_analysis
+                    )
+                    logger.info(f"🧠 SmartAnalyzer completó análisis estadístico: {len(statistical_analysis.get('insights', []))} insights generados")
+                except Exception as e:
+                    logger.warning(f"⚠️ SmartAnalyzer falló en análisis estadístico: {e}")
+                    statistical_analysis = self._basic_statistical_analysis(processed_data)
+            else:
+                statistical_analysis = self._basic_statistical_analysis(processed_data)
+            
+            # PASO 5: ANÁLISIS PREDICTIVO Y TEMPORAL
+            logger.info("� Ejecutando análisis predictivo...")
+            predictive_analysis = {}
+            temporal_analysis = {}
+            
+            if self.intelligence_systems.get('predictive_engine'):
+                try:
+                    predictive_analysis = self.intelligence_systems['predictive_engine'].generate_predictions(processed_data)
+                    logger.info(f"🧠 PredictiveAnalysisEngine generó predicciones para {len(predictive_analysis.get('predictions', []))} variables")
+                except Exception as e:
+                    logger.warning(f"⚠️ PredictiveAnalysisEngine falló: {e}")
+            
+            if self.intelligence_systems.get('temporal_engine'):
+                try:
+                    temporal_analysis = self.intelligence_systems['temporal_engine'].analyze_temporal_patterns(processed_data)
+                    logger.info(f"🧠 TemporalComparisonEngine analizó patrones temporales")
+                except Exception as e:
+                    logger.warning(f"⚠️ TemporalComparisonEngine falló: {e}")
+            
+            # PASO 6: GENERACIÓN DE ALERTAS INTELIGENTES
+            logger.info("� Generando alertas inteligentes...")
+            intelligent_alerts = []
+            
+            if self.intelligence_systems.get('alert_system'):
+                try:
+                    intelligent_alerts = self.intelligence_systems['alert_system'].generate_contextual_alerts(
+                        processed_data, statistical_analysis, predictive_analysis
+                    )
+                    logger.info(f"🧠 IntelligentAlertSystem generó {len(intelligent_alerts)} alertas contextuales")
+                except Exception as e:
+                    logger.warning(f"⚠️ IntelligentAlertSystem falló: {e}")
+            
+            # PASO 7: CONSOLIDAR ANÁLISIS COMPLETO
+            comprehensive_analysis = {
+                "query_analysis": query_analysis,
+                "device_analysis": device_analysis,
+                "statistical_analysis": statistical_analysis,
+                "predictive_analysis": predictive_analysis,
+                "temporal_analysis": temporal_analysis,
+                "intelligent_alerts": intelligent_alerts,
+                "total_records": len(processed_data),
+                "raw_data_count": len(raw_data),
+                "processing_success_rate": (len(processed_data) / len(raw_data)) * 100 if raw_data else 0
             }
             
-            formatted_data = self._format_data_for_model(processed_data, analysis, is_direct_query, query_info)
+            # PASO 8: FORMATEO INTELIGENTE DE DATOS
+            logger.info("📋 Formateando datos con sistemas inteligentes...")
+            formatted_data = ""
             
+            if self.intelligence_systems.get('report_generator'):
+                try:
+                    # Usar AdvancedReportGenerator para formateo inteligente
+                    formatted_data = self.intelligence_systems['report_generator'].generate_intelligent_report(
+                        processed_data, comprehensive_analysis, user_query
+                    )
+                    logger.info("🧠 AdvancedReportGenerator generó reporte inteligente")
+                except Exception as e:
+                    logger.warning(f"⚠️ AdvancedReportGenerator falló, usando formateo básico: {e}")
+                    formatted_data = self._basic_data_formatting(processed_data, comprehensive_analysis)
+            else:
+                formatted_data = self._basic_data_formatting(processed_data, comprehensive_analysis)
+            
+            # Actualizar estado con análisis completo
             state["formatted_data"] = formatted_data
-            state["sensor_summary"] = analysis
-            state["execution_status"] = "data_analyzed"
+            state["sensor_summary"] = device_analysis  # Para compatibilidad
+            state["comprehensive_analysis"] = comprehensive_analysis
+            state["execution_status"] = "intelligent_analysis_completed"
             
-            logger.info(f"   ✅ Datos analizados: {len(processed_data)} registros, {len(analysis['sensors'])} tipos de sensores")
+            logger.info(f"✅ ANÁLISIS INTELIGENTE COMPLETADO: {len(processed_data)} registros analizados con {len(comprehensive_analysis.get('intelligent_alerts', []))} alertas y {len(statistical_analysis.get('insights', []))} insights")
             return state
             
         except Exception as e:
@@ -651,16 +614,19 @@ Los datos de la API están llegando pero no tienen el formato esperado.
     
     async def _response_generator_node(self, state: IoTAgentState) -> IoTAgentState:
         """
-        Nodo para generar respuesta usando Groq.
+        🧠 NODO GENERADOR DE RESPUESTAS INTELIGENTES
+        
+        Utiliza AdvancedReportGenerator y AutomaticInsightsEngine para generar 
+        respuestas sofisticadas con IA en lugar de respuestas básicas.
         
         Args:
             state: Estado actual del agente
             
         Returns:
-            Estado actualizado
+            Estado actualizado con respuesta inteligente
         """
         try:
-            logger.info("🤖 Ejecutando response_generator_node (Cloud con Groq)")
+            logger.info("� Ejecutando GENERACIÓN DE RESPUESTA INTELIGENTE")
             
             # 1. Verificar límites de uso antes de hacer la consulta
             can_make_request, usage_message = usage_tracker.check_can_make_request(self.groq_model)
@@ -693,149 +659,134 @@ Los datos de la API están llegando pero no tienen el formato esperado.
             
             user_query = state["user_query"]
             formatted_data = state.get("formatted_data", "")
+            comprehensive_analysis = state.get("comprehensive_analysis", {})
             
-            # DETECTAR TIPO DE CONSULTA PARA RESPUESTA APROPIADA
-            query_lower = user_query.lower()
+            # 🧠 GENERAR RESPUESTA INTELIGENTE CON SISTEMAS AVANZADOS
+            logger.info("🧠 Generando respuesta inteligente con AdvancedReportGenerator...")
             
-            # Palabras clave para consultas DIRECTAS/ESPECÍFICAS
-            direct_keywords = [
-                "últimos", "ultimos", "listar", "mostrar", "dame", "dime",
-                "cuáles son", "cuales son", "qué datos", "que datos",
-                "registros de", "valores de", "lecturas de", "datos de"
-            ]
+            intelligent_response = ""
             
-            # Palabras clave para consultas ANALÍTICAS
-            analytical_keywords = [
-                "analiza", "analizar", "tendencia", "patrón", "patron",
-                "interpreta", "evalúa", "evalua", "reporte", "informe",
-                "comportamiento", "variabilidad", "estabilidad"
-            ]
+            if self.intelligence_systems.get('report_generator') and comprehensive_analysis:
+                try:
+                    # Usar AdvancedReportGenerator para generar respuesta completa
+                    intelligent_response = self.intelligence_systems['report_generator'].generate_intelligent_response(
+                        user_query=user_query,
+                        analysis_data=comprehensive_analysis,
+                        formatted_data=formatted_data
+                    )
+                    logger.info("🧠 AdvancedReportGenerator generó respuesta inteligente")
+                    
+                    # Si hay alertas inteligentes, agregarlas a la respuesta
+                    if comprehensive_analysis.get('intelligent_alerts'):
+                        alert_section = "\n\n🚨 ALERTAS INTELIGENTES:\n"
+                        for alert in comprehensive_analysis['intelligent_alerts']:
+                            alert_section += f"• {alert}\n"
+                        intelligent_response += alert_section
+                    
+                    # Si hay predicciones, agregarlas
+                    if comprehensive_analysis.get('predictive_analysis', {}).get('predictions'):
+                        prediction_section = "\n\n🔮 PREDICCIONES:\n"
+                        for prediction in comprehensive_analysis['predictive_analysis']['predictions']:
+                            prediction_section += f"• {prediction}\n"
+                        intelligent_response += prediction_section
+                        
+                except Exception as e:
+                    logger.warning(f"⚠️ AdvancedReportGenerator falló, usando generación básica: {e}")
+                    intelligent_response = None
             
-            is_direct_query = any(keyword in query_lower for keyword in direct_keywords)
-            is_analytical_query = any(keyword in query_lower for keyword in analytical_keywords)
+            # Si los sistemas inteligentes no generaron respuesta, usar generación básica mejorada
+            if not intelligent_response:
+                logger.info("🔄 Usando generación de respuesta básica mejorada...")
+                intelligent_response = self._generate_basic_intelligent_response(
+                    user_query, formatted_data, comprehensive_analysis
+                )
             
-            # 2. EVALUAR NECESIDAD DE VISUALIZACIÓN ANTES DE CONSTRUIR PROMPT
+            # 2. GENERAR VISUALIZACIONES INTELIGENTES SI ES NECESARIO
             chart_paths = []
             visualization_info = ""
             
-            if self.visualization_engine and formatted_data:
+            if self.intelligence_systems.get('visualization_engine'):
                 try:
-                    # Analizar si se necesitan gráficos
-                    should_generate = self.visualization_engine.should_generate_charts(
-                        user_query
-                    )
-                    
-                    if should_generate:
-                        logger.info("📊 Generando visualizaciones para consulta avanzada...")
-                        
-                        # Usar raw_data en lugar de formatted_data para los gráficos
-                        raw_data = state.get("raw_data", [])
-                        
-                        if raw_data:
-                            # Generar gráficos apropiados
-                            chart_base64_list = self.visualization_engine.generate_charts(
-                                raw_data,
-                                user_query
-                            )
-                            
-                            if chart_base64_list:
-                                visualization_info = f"GRÁFICOS GENERADOS: {len(chart_base64_list)} gráficos"
-                                logger.info(f"✅ Generados {len(chart_base64_list)} gráficos en base64")
-                                # Guardar los base64 para usar después  
-                                chart_paths = chart_base64_list
-                        else:
-                            logger.warning("No hay datos raw disponibles para generar gráficos")
-                        
+                    # Usar AdvancedVisualizationEngine para generar gráficos inteligentes
+                    raw_data = state.get("raw_data", [])
+                    if raw_data:
+                        chart_result = self.intelligence_systems['visualization_engine'].generate_intelligent_visualizations(
+                            raw_data, user_query, comprehensive_analysis
+                        )
+                        if chart_result.get('charts'):
+                            chart_paths = chart_result['charts']
+                            visualization_info = chart_result.get('description', '')
+                            logger.info(f"🧠 AdvancedVisualizationEngine generó {len(chart_paths)} visualizaciones")
                 except Exception as e:
-                    logger.warning(f"⚠️ Error generando visualizaciones: {e}")
-
-            # 3. Crear prompt adaptativo basado en el tipo de consulta
-            if is_direct_query and not is_analytical_query:
-                # CONSULTA DIRECTA - Respuesta específica y concisa
-                prompt = f"""
-                CONSULTA DIRECTA DEL USUARIO: {user_query}
-                
-                INSTRUCCIONES ESPECÍFICAS:
-                - El usuario hace una consulta DIRECTA y ESPECÍFICA
-                - RESPONDE EXACTAMENTE lo que pide, sin análisis extenso
-                - USA formato de LISTA cuando sea apropiado
-                - SÉ CONCISO pero completo
-                - NO uses secciones de análisis técnico extenso
-                {f"- IMPORTANTE: Se han generado GRÁFICOS para esta consulta: {visualization_info}" if visualization_info else ""}
-                
-                DATOS DISPONIBLES:
-                {formatted_data}
-                
-                EJEMPLOS DE RESPUESTA APROPIADA:
-                - Si pide "últimos 10 registros": Lista exactamente 10 registros
-                - Si pide "temperatura actual": Muestra valores actuales de temperatura
-                - Si pide "qué sensores hay": Lista los sensores disponibles
-                {f"- Si se solicitan gráficos: Menciona que se han generado: {visualization_info}" if visualization_info else ""}
-                
-                RESPONDE DIRECTAMENTE lo solicitado:
-                """
-            else:
-                # CONSULTA ANALÍTICA - Análisis completo con secciones técnicas
-                prompt = f"""
-                Eres un asistente experto en análisis de datos de sensores IoT.
-                {f"IMPORTANTE: Se han generado GRÁFICOS para esta consulta: {visualization_info}" if visualization_info else ""}
-                
-                CONFIGURACIÓN REAL DE DISPOSITIVOS (IMPORTANTE - SEGUIR EXACTAMENTE):
-                
-                🔧 ARDUINO ETHERNET (arduino_eth_001):
-                - IP: 192.168.0.106
-                - SENSORES DISPONIBLES: t1, t2, avg (SOLO temperaturas)
-                - NO TIENE: LDR, sensor de luz, luminosidad, fotoresistor
-                
-                📡 ESP32 WIFI (esp32_wifi_001):
-                - IP: 192.168.0.105  
-                - SENSORES DISPONIBLES: ntc_entrada, ntc_salida (temperaturas) + ldr (sensor de luz)
-                - SÍ TIENE: Sensores de temperatura Y sensor LDR para luminosidad
-                
-                CONSULTA DEL USUARIO: {user_query}
-                
-                DATOS REALES DE SENSORES:
-                {formatted_data}
-                
-                REGLAS DE ANÁLISIS (CUMPLIR ESTRICTAMENTE):
-                1. ✅ INCLUIR datos de LDR SOLO si se refiere a ESP32 WiFi
-                2. ❌ NUNCA mencionar LDR para Arduino Ethernet (no existe)
-                3. ✅ Arduino Ethernet SOLO tiene temperaturas (t1, t2, avg)
-                4. ✅ ESP32 WiFi tiene temperaturas (ntc_entrada, ntc_salida) Y ldr
-                5. 📊 Analiza TODOS los sensores disponibles del dispositivo consultado
-                6. 🚫 NO inventes sensores que no existen en la configuración
-                7. 📍 Especifica claramente qué dispositivo tiene qué sensores
-                
-                EJEMPLO DE RESPUESTA CORRECTA:
-                - "El ESP32 WiFi muestra temperaturas de 25°C y 26°C en ntc_entrada y ntc_salida, además de 450 unidades en el sensor LDR"
-                - "El Arduino Ethernet registra 24°C en t1, 25°C en t2, con promedio de 24.5°C (no tiene sensor LDR)"
-                
-                Analiza los datos reales disponibles siguiendo estas reglas exactas.
-                """
+                    logger.warning(f"⚠️ AdvancedVisualizationEngine falló: {e}")
+                    # Fallback al motor de visualización básico
+                    if self.visualization_engine:
+                        try:
+                            should_generate = self.visualization_engine.should_generate_charts(user_query)
+                            if should_generate:
+                                raw_data = state.get("raw_data", [])
+                                if raw_data:
+                                    chart_base64_list = self.visualization_engine.generate_charts(raw_data, user_query)
+                                    if chart_base64_list:
+                                        chart_paths = chart_base64_list
+                                        visualization_info = f"Generados {len(chart_base64_list)} gráficos"
+                        except Exception as e2:
+                            logger.warning(f"⚠️ Motor de visualización básico también falló: {e2}")
             
-            # 3. Generar respuesta con Groq
-            response = self.groq_integration.generate_response(prompt, model=self.groq_model)
-            
-            # 4. Integrar información de visualización con la respuesta
-            if visualization_info and "GRÁFICOS GENERADOS:" not in visualization_info:
-                # Formato más detallado para la respuesta final
-                chart_names = [path.split('\\')[-1] for path in chart_paths] if chart_paths else []
-                visualization_section = f"""
+            # 3. GENERAR RESPUESTA FINAL CON GROQ + IA MEJORADA
+            if intelligent_response:
+                # Usar la respuesta inteligente como base y mejorarla con Groq
+                try:
+                    # Crear prompt mejorado para Groq usando la respuesta inteligente
+                    enhanced_prompt = f"""
+Tienes acceso a un análisis inteligente avanzado de datos IoT. Tu trabajo es tomar este análisis 
+y crear una respuesta conversacional natural y útil para el usuario.
 
-📊 **GRÁFICOS GENERADOS**: {', '.join(chart_names)}
-                                
-Los gráficos han sido guardados y están disponibles para análisis visual de los datos.
+CONSULTA ORIGINAL DEL USUARIO: {user_query}
+
+ANÁLISIS INTELIGENTE DISPONIBLE:
+{intelligent_response}
+
+CONTEXTO ADICIONAL:
+- Total de dispositivos activos: {comprehensive_analysis.get('device_analysis', {}).get('total_devices', 0)}
+- Total de sensores: {comprehensive_analysis.get('device_analysis', {}).get('total_sensors', 0)}
+- Registros analizados: {comprehensive_analysis.get('total_records', 0)}
+{f"- Visualizaciones generadas: {visualization_info}" if visualization_info else ""}
+
+Tu respuesta debe:
+1. Ser conversacional y útil
+2. Incluir insights específicos del análisis inteligente
+3. Responder directamente la pregunta del usuario
+4. Mostrar que entiendes los datos en profundidad
+5. Incluir conclusiones y recomendaciones cuando sea apropiado
+
+RESPUESTA CONVERSACIONAL:
 """
-                final_response = response + visualization_section
+                    
+                    # Generar respuesta mejorada con Groq
+                    groq_response = self.groq_integration.generate_response(enhanced_prompt, model=self.groq_model)
+                    final_response = groq_response
+                    
+                    # Agregar información de visualización si existe
+                    if visualization_info:
+                        final_response += f"\n\n📊 **Visualizaciones**: {visualization_info}"
+                    
+                    logger.info("🧠 Respuesta generada con IA avanzada + Groq")
+                    
+                except Exception as e:
+                    logger.warning(f"⚠️ Error en generación con Groq, usando respuesta inteligente pura: {e}")
+                    final_response = intelligent_response
+                    if visualization_info:
+                        final_response += f"\n\n📊 **Visualizaciones**: {visualization_info}"
             else:
-                final_response = response
+                # Fallback a generación básica
+                final_response = "No se pudieron generar insights inteligentes. Verifique la conectividad con los sistemas de datos."
             
-            # 5. Registrar uso de la consulta (estimar tokens basado en longitud)
-            estimated_tokens = len(prompt) // 4 + len(response) // 4  # Estimación aproximada
+            # 4. Registrar uso y agregar información de límites si es necesario
+            estimated_tokens = len(final_response) // 4
             usage_info = usage_tracker.track_request(self.groq_model, estimated_tokens)
             
-            # 6. Agregar información de uso a la respuesta si está cerca del límite
-            usage_footer = ""
+            # Agregar información de uso si está cerca del límite
             if usage_info["status"] in ["warning", "critical"]:
                 remaining_percentage = 100 - usage_info["requests_percentage"]
                 usage_footer = f"""
@@ -858,6 +809,65 @@ Los gráficos han sido guardados y están disponibles para análisis visual de l
             state["final_response"] = self._generate_fallback_response(state)
             state["execution_status"] = "fallback_response"
             return state
+    
+    def _generate_basic_intelligent_response(self, user_query: str, formatted_data: str, analysis: Dict) -> str:
+        """Genera respuesta básica inteligente cuando los sistemas avanzados no están disponibles."""
+        if not formatted_data:
+            return "No hay datos disponibles para generar una respuesta."
+        
+        # Analizar la consulta para personalizar la respuesta
+        query_lower = user_query.lower()
+        
+        # Respuesta base con estructura inteligente
+        response = f"""
+🧠 **ANÁLISIS INTELIGENTE IoT**
+
+📋 **Consulta**: {user_query}
+
+📊 **Resumen del Sistema**:
+• Dispositivos activos: {analysis.get('device_analysis', {}).get('total_devices', 0)}
+• Tipos de sensores: {analysis.get('device_analysis', {}).get('total_sensors', 0)}
+• Registros procesados: {analysis.get('total_records', 0)}
+• Tasa de éxito del procesamiento: {analysis.get('processing_success_rate', 0):.1f}%
+
+📈 **Datos Procesados**:
+{formatted_data}
+"""
+        
+        # Agregar insights estadísticos si están disponibles
+        if analysis.get('statistical_analysis', {}).get('insights'):
+            response += f"""
+
+💡 **Insights Automáticos**:
+"""
+            for insight in analysis['statistical_analysis']['insights']:
+                response += f"• {insight}\n"
+        
+        # Agregar alertas si están disponibles
+        if analysis.get('intelligent_alerts'):
+            response += f"""
+
+🚨 **Alertas del Sistema**:
+"""
+            for alert in analysis['intelligent_alerts']:
+                response += f"• {alert}\n"
+        
+        # Agregar predicciones si están disponibles
+        if analysis.get('predictive_analysis', {}).get('predictions'):
+            response += f"""
+
+🔮 **Predicciones**:
+"""
+            for prediction in analysis['predictive_analysis']['predictions']:
+                response += f"• {prediction}\n"
+        
+        response += f"""
+
+✅ **Sistema de Inteligencia**: Activado (modo básico)
+⏰ **Análisis completado**: {datetime.now().strftime('%H:%M:%S')}
+"""
+        
+        return response
     
     async def _data_verification_node(self, state: IoTAgentState) -> IoTAgentState:
         """
@@ -1324,6 +1334,187 @@ Los gráficos han sido guardados y están disponibles para análisis visual de l
             return f"❌ Error en sistema de fallback: {str(e)}. Verifica la conectividad con la API."
             logger.error(f"Error en process_query_sync: {e}")
             return f"❌ Error procesando consulta: {str(e)}"
+
+    # 🔧 MÉTODOS AUXILIARES PARA FALLBACK (CUANDO SISTEMAS DE INTELIGENCIA NO ESTÁN DISPONIBLES)
+    
+    def _generate_fallback_error_message(self, state: IoTAgentState) -> str:
+        """Genera mensaje de error cuando no hay datos disponibles."""
+        if "error" in state:
+            error_info = state["error"]
+            return f"""
+🚨 ERROR: No se pudieron obtener datos de sensores
+
+{error_info.get('message', 'Error desconocido')}
+
+📋 INSTRUCCIONES PARA RESOLVER:
+""" + "\n".join(error_info.get('instructions', []))
+        else:
+            return """
+🚨 ERROR: No hay datos de sensores disponibles
+
+La API de la Jetson no está respondiendo. Por favor:
+
+🔧 Verificar que la Jetson esté encendida y conectada a la red
+📡 Confirmar que los servicios systemd estén ejecutándose:
+   sudo systemctl status iot-api-service
+   sudo systemctl status sensor-collector-service
+🌐 Verificar conectividad de red desde la Jetson
+📋 Revisar logs del sistema: journalctl -u iot-api-service -f
+🔄 Reiniciar servicios si es necesario: sudo systemctl restart iot-api-service
+"""
+    
+    def _generate_data_format_error(self, raw_data: List) -> str:
+        """Genera mensaje de error de formato de datos."""
+        return f"""
+🚨 ERROR: Los datos obtenidos tienen formato incorrecto
+
+Los datos de la API están llegando pero no tienen el formato esperado.
+
+📋 DATOS RECIBIDOS:
+{str(raw_data[:3])}
+
+🔧 POSIBLES SOLUCIONES:
+📡 Verificar formato de respuesta de la API Jetson
+🔄 Reiniciar servicios de la API: sudo systemctl restart iot-api-service
+🌐 Verificar que la API retorne JSON válido
+"""
+    
+    def _basic_data_sanitization(self, raw_data: List) -> List[Dict]:
+        """Sanitización básica de datos cuando SmartAnalyzer no está disponible."""
+        processed_data = []
+        for item in raw_data:
+            try:
+                if isinstance(item, dict):
+                    if all(key in item for key in ['device_id', 'sensor_type', 'value']):
+                        processed_data.append(item)
+                elif isinstance(item, str):
+                    import json
+                    try:
+                        parsed_item = json.loads(item)
+                        if isinstance(parsed_item, dict) and all(key in parsed_item for key in ['device_id', 'sensor_type', 'value']):
+                            processed_data.append(parsed_item)
+                    except json.JSONDecodeError:
+                        pass
+            except Exception:
+                pass
+        return processed_data
+    
+    def _basic_query_analysis(self, user_query: str) -> Dict:
+        """Análisis básico de consulta cuando AutomaticInsightsEngine no está disponible."""
+        import re
+        query_lower = user_query.lower()
+        
+        # Detectar tipos básicos de consulta
+        intent = "general_query"
+        if any(word in query_lower for word in ["últimos", "listar", "mostrar", "dame"]):
+            intent = "data_request"
+        elif any(word in query_lower for word in ["analiza", "tendencia", "comportamiento"]):
+            intent = "analysis_request"
+        
+        # Detectar números y tiempo
+        numbers = re.findall(r'\d+', user_query)
+        time_keywords = ["minuto", "minutos", "hora", "horas"]
+        has_time_reference = any(keyword in query_lower for keyword in time_keywords)
+        
+        return {
+            "intent": intent,
+            "numbers_found": numbers,
+            "has_time_reference": has_time_reference,
+            "confidence": 0.5  # Baja confianza para análisis básico
+        }
+    
+    def _basic_device_analysis(self, processed_data: List[Dict]) -> Dict:
+        """Análisis básico de dispositivos cuando DynamicSensorDetector no está disponible."""
+        devices = set()
+        sensors = set()
+        
+        for record in processed_data:
+            if isinstance(record, dict):
+                devices.add(record.get("device_id", "unknown"))
+                sensors.add(record.get("sensor_type", "unknown"))
+        
+        return {
+            "total_devices": len(devices),
+            "total_sensors": len(sensors),
+            "devices": list(devices),
+            "sensors": list(sensors),
+            "analysis_type": "basic"
+        }
+    
+    def _basic_statistical_analysis(self, processed_data: List[Dict]) -> Dict:
+        """Análisis estadístico básico cuando SmartAnalyzer no está disponible."""
+        if not processed_data:
+            return {"insights": [], "statistics": {}}
+        
+        # Estadísticas básicas
+        total_records = len(processed_data)
+        
+        # Contar valores por sensor
+        sensor_stats = {}
+        for record in processed_data:
+            if isinstance(record, dict):
+                sensor_type = record.get("sensor_type", "unknown")
+                value = record.get("value")
+                
+                if sensor_type not in sensor_stats:
+                    sensor_stats[sensor_type] = []
+                
+                try:
+                    numeric_value = float(value)
+                    sensor_stats[sensor_type].append(numeric_value)
+                except (ValueError, TypeError):
+                    pass
+        
+        insights = [f"Total de {total_records} registros procesados"]
+        
+        for sensor, values in sensor_stats.items():
+            if values:
+                avg_val = sum(values) / len(values)
+                insights.append(f"{sensor}: {len(values)} lecturas, promedio {avg_val:.2f}")
+        
+        return {
+            "insights": insights,
+            "statistics": sensor_stats,
+            "analysis_type": "basic"
+        }
+    
+    def _basic_data_formatting(self, processed_data: List[Dict], analysis: Dict) -> str:
+        """Formateo básico de datos cuando AdvancedReportGenerator no está disponible."""
+        if not processed_data:
+            return "No hay datos disponibles para mostrar."
+        
+        # Crear reporte básico
+        report = f"""
+📊 RESUMEN DE DATOS IoT
+
+🔍 Total de registros: {len(processed_data)}
+📱 Dispositivos detectados: {analysis.get('device_analysis', {}).get('total_devices', 0)}
+🌡️ Tipos de sensores: {analysis.get('device_analysis', {}).get('total_sensors', 0)}
+
+📋 ÚLTIMOS REGISTROS:
+"""
+        
+        # Mostrar hasta 10 registros recientes
+        for i, record in enumerate(processed_data[:10]):
+            if isinstance(record, dict):
+                device = record.get("device_id", "N/A")
+                sensor = record.get("sensor_type", "N/A")
+                value = record.get("value", "N/A")
+                timestamp = record.get("timestamp", "N/A")
+                
+                report += f"""
+{i+1}. 📱 {device} | 🌡️ {sensor}: {value} | ⏰ {timestamp}"""
+        
+        # Agregar insights básicos si están disponibles
+        if analysis.get('statistical_analysis', {}).get('insights'):
+            report += f"""
+
+💡 INSIGHTS BÁSICOS:
+"""
+            for insight in analysis['statistical_analysis']['insights']:
+                report += f"• {insight}\n"
+        
+        return report
 
 
 # Función de utilidad para crear instancia cloud
