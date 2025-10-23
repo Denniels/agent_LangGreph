@@ -33,7 +33,15 @@ st.set_page_config(
 
 # Variables de entorno - Compatible con Streamlit Cloud
 GROQ_API_KEY = os.getenv('GROQ_API_KEY') or st.secrets.get('GROQ_API_KEY', None)
-JETSON_API_URL = "https://replica-subscriber-permission-restricted.trycloudflare.com"
+
+# URL dinámica usando el dashboard como fuente de verdad
+try:
+    from modules.utils.hybrid_url_manager import get_jetson_url_hybrid
+    JETSON_API_URL = get_jetson_url_hybrid()
+except Exception as e:
+    # Fallback a URL más reciente conocida
+    JETSON_API_URL = "https://reflect-wed-governmental-fisher.trycloudflare.com"
+    st.warning(f"⚠️ Usando URL de fallback: {e}")
 
 # Agregar path del proyecto
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
