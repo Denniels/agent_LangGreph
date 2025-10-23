@@ -164,6 +164,9 @@ class AdvancedReportGenerator:
             
             # 2. ANÁLISIS INTELIGENTE COMPLETO
             smart_analysis = self.smart_analyzer.analyze_comprehensive(sensor_data, analysis_hours)
+            self.logger.info(f"🔍 Smart analysis keys: {list(smart_analysis.keys()) if smart_analysis else 'None'}")
+            self.logger.info(f"🔍 Devices analyzed: {smart_analysis.get('devices_analyzed', [])} ({len(smart_analysis.get('devices_analyzed', []))} devices)")
+            self.logger.info(f"🔍 Sensors analyzed: {smart_analysis.get('sensors_analyzed', [])} ({len(smart_analysis.get('sensors_analyzed', []))} sensors)")
             
             # 3. DESCUBRIMIENTO DINÁMICO DE SENSORES
             sensor_inventory = await self.sensor_detector.discover_all_sensors()
