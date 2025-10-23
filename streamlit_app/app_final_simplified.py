@@ -31,8 +31,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Variables de entorno
-GROQ_API_KEY = os.getenv('GROQ_API_KEY')
+# Variables de entorno - Compatible con Streamlit Cloud
+GROQ_API_KEY = os.getenv('GROQ_API_KEY') or st.secrets.get('GROQ_API_KEY', None)
 JETSON_API_URL = "https://replica-subscriber-permission-restricted.trycloudflare.com"
 
 # Agregar path del proyecto
@@ -1010,10 +1010,17 @@ def create_intelligent_fallback_analysis(filtered_data, devices_data, hours, rep
 def main():
     """Función principal SIMPLIFICADA"""
     
-    # Verificar configuración
+    # Verificar configuración para Streamlit Cloud
     if not GROQ_API_KEY:
         st.error("❌ Configure GROQ_API_KEY en Streamlit Cloud Secrets")
+        st.info("ℹ️ Ve a tu app en Streamlit Cloud → Advanced Settings → Secrets")
+        st.code('GROQ_API_KEY = "tu_api_key_aqui"')
         st.stop()
+    
+    # Mostrar configuración actual (solo en debug)
+    if st.sidebar.checkbox("🔧 Debug Info", value=False):
+        st.sidebar.success(f"✅ GROQ_API_KEY configurado")
+        st.sidebar.info(f"🔗 Jetson URL: {JETSON_API_URL}")
     
     # Inicializar timestamp
     from datetime import datetime

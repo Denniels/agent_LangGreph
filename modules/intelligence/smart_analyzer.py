@@ -12,7 +12,7 @@ import logging
 import statistics
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from collections import defaultdict
@@ -147,12 +147,20 @@ class SmartAnalyzer:
                 if final_missing:
                     return self._create_empty_analysis(f"Columnas faltantes después de mapeo: {', '.join(final_missing)}")
             
-            # Convertir timestamp a datetime si es necesario
+            # Convertir timestamp a datetime si es necesario (CORREGIDO: manejo de timezone)
             if df['timestamp'].dtype == 'object':
-                df['timestamp'] = pd.to_datetime(df['timestamp'])
+                df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
             
-            # Filtrar por período de análisis (con fallback a todos los datos)
-            cutoff_time = datetime.now() - timedelta(hours=analysis_hours)
+            # Convertir columna 'value' a numérico (CORREGIDO: valores string)
+            if 'value' in df.columns:
+                df['value'] = pd.to_numeric(df['value'], errors='coerce')
+                self.logger.info(f"✅ Columna 'value' convertida a numérico")
+            
+            # Filtrar por período de análisis (con fallback a todos los datos) - CORREGIDO: timezone aware
+            from datetime import timezone
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=analysis_hours)
+            self.logger.info(f"🔍 Tiempo de corte: {cutoff_time}")
+            
             df_filtered = df[df['timestamp'] >= cutoff_time].copy()
             
             # Si no hay datos en el período especificado, usar todos los datos disponibles
@@ -338,7 +346,8 @@ class SmartAnalyzer:
                 timestamps = group['timestamp'].values
                 
                 # 1. DETECCIÓN POR Z-SCORE
-                z_scores = np.abs(statistics.zscore(values))
+                from scipy import stats
+                z_scores = np.abs(stats.zscore(values))
                 z_threshold = self._get_sensor_config(sensor_type)['anomaly_z_score']
                 
                 z_anomalies = np.where(z_scores > z_threshold)[0]
@@ -723,7 +732,8 @@ class SmartAnalyzer:
         try:
             # Usar Z-score para detección
             if len(values) >= 3:
-                z_scores = np.abs(statistics.zscore(values))
+                from scipy import stats
+                z_scores = np.abs(stats.zscore(values))
                 threshold = config['anomaly_z_score']
                 
                 anomalous_indices = np.where(z_scores > threshold)[0]
@@ -816,7 +826,7 @@ class SmartAnalyzer:
                 index='timestamp', 
                 columns=['device_id', 'sensor_type'], 
                 aggfunc='mean'
-            ).fillna(method='ffill').fillna(method='bfill')
+            ).ffill().bfill()
             
             if pivot_df.shape[1] >= 2:  # Necesitamos al menos 2 sensores
                 correlation_matrix = pivot_df.corr()
@@ -912,7 +922,7 @@ class SmartAnalyzer:
         insights = []
         
         try:
-            current_time = datetime.now()
+            current_time = datetime.now(timezone.utc)  # Hacer timezone-aware
             devices_analyzed = df['device_id'].unique()
             
             # Verificar última actividad de cada dispositivo
@@ -921,6 +931,14 @@ class SmartAnalyzer:
             for device_id in devices_analyzed:
                 device_data = df[df['device_id'] == device_id]
                 last_timestamp = pd.to_datetime(device_data['timestamp']).max()
+                
+                # Convertir a datetime timezone-aware si es necesario
+                if last_timestamp.tz is None:
+                    last_timestamp = last_timestamp.tz_localize('UTC')
+                
+                # Asegurar que current_time también tenga timezone
+                if current_time.tzinfo is None:
+                    current_time = current_time.replace(tzinfo=timezone.utc)
                 
                 time_since_last = current_time - last_timestamp.to_pydatetime()
                 

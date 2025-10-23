@@ -23,18 +23,11 @@ font = "sans serif"
 [runner]
 # Optimizaciones de rendimiento para cloud
 magicEnabled = true
-installTracer = false
-fixMatplotlib = true
 
 [client]
 # Configuración del cliente
 showErrorDetails = true
 toolbarMode = "minimal"
 
-[global]
-# Configuraciones globales optimizadas para cloud
-developmentMode = false
-logLevel = "info"
-
 # Sin configuraciones obsoletas que causan warnings
-# (removido dataFrameSerialization que ya no es válido)
+# Removido installTracer, fixMatplotlib, logLevel que ya no son válidas

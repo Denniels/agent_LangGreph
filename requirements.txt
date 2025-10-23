@@ -33,6 +33,7 @@ nest-asyncio==1.6.0
 
 # Machine Learning ligero
 scikit-learn==1.5.2
+scipy==1.14.1
 
 # Extras para mejor rendimiento
 xxhash>=3.5.0
