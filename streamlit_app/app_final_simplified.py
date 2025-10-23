@@ -713,14 +713,15 @@ def generate_intelligent_report(report_generator, report_type, all_data, devices
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
             
-            # Generar reporte comprehensive con datos reales
+            # Generar reporte comprehensive con datos reales PASADOS DIRECTAMENTE
             with st.spinner("🤖 Generando análisis inteligente con IA/ML..."):
                 report_result = loop.run_until_complete(
                     report_generator.generate_comprehensive_report(
                         analysis_hours=hours,
                         report_type=report_type.lower().replace(" ", "_"),
                         include_predictions=include_analysis,
-                        include_correlations=include_charts
+                        include_correlations=include_charts,
+                        raw_data=filtered_data  # PASAR DATOS DIRECTAMENTE
                     )
                 )
                 

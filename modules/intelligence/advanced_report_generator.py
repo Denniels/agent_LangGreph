@@ -131,7 +131,8 @@ class AdvancedReportGenerator:
                                           report_type: str = 'technical',
                                           include_predictions: bool = True,
                                           include_correlations: bool = True,
-                                          custom_title: Optional[str] = None) -> AdvancedReport:
+                                          custom_title: Optional[str] = None,
+                                          raw_data: Optional[List[Dict]] = None) -> AdvancedReport:
         """
         Genera reporte comprehensivo con análisis avanzado.
         
@@ -141,6 +142,7 @@ class AdvancedReportGenerator:
             include_predictions: Incluir análisis predictivo
             include_correlations: Incluir análisis de correlaciones
             custom_title: Título personalizado del reporte
+            raw_data: Datos ya obtenidos (opcional, si no se proveen se obtienen automáticamente)
             
         Returns:
             AdvancedReport completo con todos los análisis
@@ -149,25 +151,31 @@ class AdvancedReportGenerator:
             self.logger.info(f"🚀 Generando reporte comprehensivo tipo '{report_type}' para {analysis_hours}h")
             
             # 1. OBTENER Y VALIDAR DATOS
-            raw_data = await self._fetch_comprehensive_data(analysis_hours)
+            if raw_data is not None:
+                # Usar datos proporcionados directamente
+                self.logger.info(f"✅ Usando {len(raw_data)} registros proporcionados directamente")
+                sensor_data = raw_data
+            else:
+                # Obtener datos automáticamente
+                sensor_data = await self._fetch_comprehensive_data(analysis_hours)
             
-            if not raw_data:
+            if not sensor_data:
                 return self._create_empty_report("No hay datos disponibles para el análisis")
             
             # 2. ANÁLISIS INTELIGENTE COMPLETO
-            smart_analysis = self.smart_analyzer.analyze_comprehensive(raw_data, analysis_hours)
+            smart_analysis = self.smart_analyzer.analyze_comprehensive(sensor_data, analysis_hours)
             
             # 3. DESCUBRIMIENTO DINÁMICO DE SENSORES
             sensor_inventory = await self.sensor_detector.discover_all_sensors()
             
             # 4. GENERAR VISUALIZACIONES AVANZADAS
             visualizations = await self._generate_advanced_visualizations(
-                raw_data, smart_analysis, include_correlations
+                sensor_data, smart_analysis, include_correlations
             )
             
             # 5. CREAR SECCIONES DEL REPORTE
             report_sections = await self._create_report_sections(
-                raw_data, smart_analysis, sensor_inventory, visualizations, report_type
+                sensor_data, smart_analysis, sensor_inventory, visualizations, report_type
             )
             
             # 6. GENERAR RESUMEN EJECUTIVO INTELIGENTE
@@ -621,32 +629,53 @@ class AdvancedReportGenerator:
     # MÉTODOS PRIVADOS
     
     async def _fetch_comprehensive_data(self, hours: float) -> List[Dict[str, Any]]:
-        """Obtiene datos comprehensivos para análisis"""
+        """Obtiene datos comprehensivos para análisis - USANDO ENDPOINT /data CORRECTO"""
         try:
-            # Usar el endpoint estándar de la API
-            import requests
+            # Usar DirectJetsonConnector que ya sabemos que funciona con /data
+            from modules.tools.direct_jetson_connector import DirectJetsonConnector
             
-            url = f"{self.jetson_api_url}/api/get_recent_data"
-            params = {'hours': hours}
+            connector = DirectJetsonConnector(self.jetson_api_url)
+            data_result = connector.get_all_data_simple()
             
-            response = requests.get(url, params=params, timeout=30)
-            
-            if response.status_code == 200:
-                data = response.json()
+            if data_result.get('status') == 'success':
+                sensor_data = data_result.get('sensor_data', [])
+                self.logger.info(f"✅ Obtenidos {len(sensor_data)} registros desde endpoint /data")
                 
-                if data.get('status') == 'success':
-                    sensor_data = data.get('sensor_data', [])
-                    self.logger.info(f"✅ Obtenidos {len(sensor_data)} registros para reporte")
-                    return sensor_data
+                # Aplicar filtro de tiempo si es necesario
+                if hours and hours < 168:  # Solo filtrar si es menos de una semana
+                    from datetime import datetime, timedelta
+                    cutoff_time = datetime.now() - timedelta(hours=hours)
+                    filtered_data = []
+                    
+                    for record in sensor_data:
+                        try:
+                            timestamp_str = record.get('timestamp', record.get('created_at', ''))
+                            if timestamp_str:
+                                if 'T' in timestamp_str:
+                                    record_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                                else:
+                                    record_time = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+                                
+                                if record_time >= cutoff_time:
+                                    filtered_data.append(record)
+                            else:
+                                # Incluir registros sin timestamp
+                                filtered_data.append(record)
+                        except:
+                            # Incluir registros con timestamp inválido
+                            filtered_data.append(record)
+                    
+                    self.logger.info(f"✅ Filtrados {len(filtered_data)} registros de últimas {hours}h")
+                    return filtered_data
                 else:
-                    self.logger.warning(f"⚠️ API retornó estado: {data.get('status')}")
-                    return []
+                    # Retornar todos los datos sin filtrar
+                    return sensor_data
             else:
-                self.logger.error(f"❌ Error HTTP {response.status_code}")
+                self.logger.warning(f"⚠️ DirectJetsonConnector falló: {data_result.get('error', 'Unknown')}")
                 return []
                 
         except Exception as e:
-            self.logger.error(f"❌ Error obteniendo datos: {e}")
+            self.logger.error(f"❌ Error obteniendo datos del endpoint /data: {e}")
             return []
     
     async def _generate_advanced_visualizations(self, raw_data: List[Dict], 
