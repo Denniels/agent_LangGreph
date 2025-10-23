@@ -115,46 +115,55 @@ def initialize_services():
         return None, None
 
 def get_device_status_for_system():
-    """Obtener estado de dispositivos SOLO para la pestaña Sistema"""
+    """Obtener estado de dispositivos SOLO para la pestaña Sistema - CON DATOS REALES"""
     try:
-        from modules.agents.direct_api_agent import DirectAPIAgent
-        direct_agent = DirectAPIAgent(base_url=JETSON_API_URL)
+        from modules.tools.direct_jetson_connector import DirectJetsonConnector
+        connector = DirectJetsonConnector(JETSON_API_URL)
         
-        # Obtener datos de últimos 30 minutos
-        data_result = direct_agent.get_all_recent_data(hours=0.5)
+        # Obtener DATOS REALES del endpoint /data
+        data_result = connector.get_all_data_simple()
         
         if data_result.get('status') == 'success':
-            devices_data = data_result.get('data', {}).get('devices', [])
             all_records = data_result.get('sensor_data', [])
+            devices_from_api = data_result.get('devices', [])
             
-            device_status = {}
-            for device in devices_data:
-                device_id = device.get('device_id')
-                records = device.get('records', [])
+            # Análisis de datos reales por dispositivo
+            device_analysis = {}
+            sensor_types = set()
+            
+            for record in all_records:
+                device_id = record.get('device_id', 'unknown')
+                sensor_type = record.get('sensor_type', 'unknown')
                 
-                if records:
-                    # Analizar antigüedad de datos
-                    latest_record = max(records, key=lambda x: x.get('timestamp', ''))
-                    last_timestamp = latest_record.get('timestamp', '')
-                    
-                    # Contar tipos de sensores únicos
-                    unique_sensors = len(set(r.get('sensor_type') for r in records))
-                    
-                    device_status[device_id] = {
-                        'status': '🟢 Activo',
-                        'records_count': len(records),
-                        'sensors_count': unique_sensors,
-                        'last_seen': last_timestamp,
-                        'active': True
+                if device_id not in device_analysis:
+                    device_analysis[device_id] = {
+                        'records': [],
+                        'sensor_types': set(),
+                        'latest_timestamp': ''
                     }
-                else:
-                    device_status[device_id] = {
-                        'status': '🔴 Inactivo',
-                        'records_count': 0,
-                        'sensors_count': 0,
-                        'last_seen': 'Sin datos',
-                        'active': False
-                    }
+                
+                device_analysis[device_id]['records'].append(record)
+                device_analysis[device_id]['sensor_types'].add(sensor_type)
+                sensor_types.add(sensor_type)
+                
+                # Actualizar timestamp más reciente
+                timestamp = record.get('timestamp', record.get('created_at', ''))
+                if timestamp > device_analysis[device_id]['latest_timestamp']:
+                    device_analysis[device_id]['latest_timestamp'] = timestamp
+            
+            # Crear status de dispositivos con datos reales
+            device_status = {}
+            for device_id, data in device_analysis.items():
+                records_count = len(data['records'])
+                sensors_count = len(data['sensor_types'])
+                
+                device_status[device_id] = {
+                    'status': '🟢 Activo' if records_count > 0 else '🔴 Inactivo',
+                    'records_count': records_count,
+                    'sensors_count': sensors_count,
+                    'last_seen': data['latest_timestamp'] or 'Sin timestamp',
+                    'active': records_count > 0
+                }
             
             return device_status, len(all_records)
         
@@ -708,10 +717,10 @@ def generate_intelligent_report(report_generator, report_type, all_data, devices
             with st.spinner("🤖 Generando análisis inteligente con IA/ML..."):
                 report_result = loop.run_until_complete(
                     report_generator.generate_comprehensive_report(
-                        hours=hours,
+                        analysis_hours=hours,
                         report_type=report_type.lower().replace(" ", "_"),
-                        include_visualizations=include_charts,
-                        include_predictions=include_analysis
+                        include_predictions=include_analysis,
+                        include_correlations=include_charts
                     )
                 )
                 
@@ -797,7 +806,17 @@ def generate_intelligent_report(report_generator, report_type, all_data, devices
             if format_type == "PDF" or st.button("📄 Descargar Reporte en PDF"):
                 with st.spinner("🔄 Generando PDF inteligente..."):
                     try:
-                        pdf_bytes = loop.run_until_complete(
+                        # Crear loop robusto para PDF
+                        import asyncio
+                        try:
+                            pdf_loop = asyncio.get_event_loop()
+                            if pdf_loop.is_closed():
+                                raise RuntimeError("Loop cerrado")
+                        except RuntimeError:
+                            pdf_loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(pdf_loop)
+                        
+                        pdf_bytes = pdf_loop.run_until_complete(
                             report_generator.export_to_pdf(
                                 report_result,
                                 f"Reporte_IoT_Inteligente_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
@@ -816,6 +835,28 @@ def generate_intelligent_report(report_generator, report_type, all_data, devices
                             st.error("❌ Error generando PDF")
                     except Exception as pdf_error:
                         st.error(f"❌ Error generando PDF: {pdf_error}")
+                        # Fallback: crear PDF básico
+                        try:
+                            st.info("🔄 Generando PDF básico como respaldo...")
+                            basic_pdf_content = f"""
+# Reporte IoT - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+## Resumen
+- Registros analizados: {len(filtered_data)}
+- Período: {hours} horas
+- Estado: Operativo
+
+## Datos
+{str(report_result)[:500]}...
+                            """
+                            st.download_button(
+                                label="⬇️ Descargar Reporte Básico (TXT)",
+                                data=basic_pdf_content,
+                                file_name=f"Reporte_Basico_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                                mime="text/plain"
+                            )
+                        except:
+                            st.error("❌ No se pudo generar ningún tipo de descarga")
             
         else:
             st.error("❌ Error generando reporte inteligente")
