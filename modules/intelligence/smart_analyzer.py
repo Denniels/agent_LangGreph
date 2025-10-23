@@ -110,15 +110,42 @@ class SmartAnalyzer:
             if not raw_data:
                 return self._create_empty_analysis("No hay datos disponibles para análisis")
             
+            # DIAGNÓSTICO: Verificar estructura de datos
+            self.logger.info(f"🔍 SmartAnalyzer recibió {len(raw_data)} registros")
+            if raw_data:
+                sample = raw_data[0]
+                self.logger.info(f"🔍 Muestra de datos: {sample}")
+                self.logger.info(f"🔍 Claves disponibles: {list(sample.keys())}")
+            
             # Convertir a DataFrame para análisis avanzado
             df = pd.DataFrame(raw_data)
+            self.logger.info(f"🔍 DataFrame creado con columnas: {list(df.columns)}")
             
             # Asegurar que tenemos columnas necesarias
             required_cols = ['timestamp', 'device_id', 'sensor_type', 'value']
             missing_cols = [col for col in required_cols if col not in df.columns]
             
             if missing_cols:
-                return self._create_empty_analysis(f"Columnas faltantes: {', '.join(missing_cols)}")
+                self.logger.error(f"❌ Columnas faltantes: {missing_cols}")
+                # Intentar mapear columnas alternativas
+                column_mapping = {
+                    'value': ['sensor_value', 'reading', 'data'],
+                    'timestamp': ['created_at', 'time', 'date'],
+                    'device_id': ['device', 'sensor_id'],
+                    'sensor_type': ['type', 'sensor']
+                }
+                
+                for required_col in missing_cols:
+                    for alt_col in column_mapping.get(required_col, []):
+                        if alt_col in df.columns:
+                            df[required_col] = df[alt_col]
+                            self.logger.info(f"✅ Mapeado {alt_col} → {required_col}")
+                            break
+                
+                # Verificar nuevamente
+                final_missing = [col for col in required_cols if col not in df.columns]
+                if final_missing:
+                    return self._create_empty_analysis(f"Columnas faltantes después de mapeo: {', '.join(final_missing)}")
             
             # Convertir timestamp a datetime si es necesario
             if df['timestamp'].dtype == 'object':
