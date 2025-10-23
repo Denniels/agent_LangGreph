@@ -1,0 +1,18 @@
+{
+  "current_url": "https://roof-imposed-noticed-fire.trycloudflare.com",
+  "backup_urls": [
+    "https://roof-imposed-noticed-fire.trycloudflare.com",
+    "https://returned-convenience-tower-switched.trycloudflare.com",
+    "https://reflect-wed-governmental-fisher.trycloudflare.com"
+  ],
+  "last_updated": "2025-10-23T02:20:00Z",
+  "update_source": "user_screenshots_manual_update",
+  "dashboard_url": "https://iotapp-jvwtoekeo73ruxn9mdhfnc.streamlit.app",
+  "validation_endpoint": "/health",
+  "metadata": {
+    "detection_method": "user_provided_current_url",
+    "confident": true,
+    "tested": false,
+    "notes": "URL actualizada manualmente basada en capturas de pantalla del usuario"
+  }
+}

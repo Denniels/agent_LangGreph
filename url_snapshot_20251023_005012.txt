@@ -1,0 +1,6 @@
+URL Detection Snapshot - 2025-10-23 00:50:12.273626
+==================================================
+
+Hybrid Manager: https://reflect-wed-governmental-fisher.trycloudflare.com
+Dashboard Scraping: https://reflect-wed-governmental-fisher.trycloudflare.com
+App Configuration: https://reflect-wed-governmental-fisher.trycloudflare.com

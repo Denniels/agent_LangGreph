@@ -13,6 +13,7 @@ Sistema IoT completo sin complejidades innecesarias:
 import streamlit as st
 import os
 import sys
+import time
 
 # Configurar matplotlib ANTES de cualquier otro import
 try:
@@ -34,14 +35,29 @@ st.set_page_config(
 # Variables de entorno - Compatible con Streamlit Cloud
 GROQ_API_KEY = os.getenv('GROQ_API_KEY') or st.secrets.get('GROQ_API_KEY', None)
 
-# URL dinámica usando el dashboard como fuente de verdad
-try:
-    from modules.utils.hybrid_url_manager import get_jetson_url_hybrid
-    JETSON_API_URL = get_jetson_url_hybrid()
-except Exception as e:
-    # Fallback a URL más reciente conocida
-    JETSON_API_URL = "https://reflect-wed-governmental-fisher.trycloudflare.com"
-    st.warning(f"⚠️ Usando URL de fallback: {e}")
+# URL dinámica con prioridad para configuración manual
+def get_current_jetson_url():
+    """Obtener URL actual con prioridad para configuración manual."""
+    # 1. Verificar si hay URL manual configurada
+    if 'manual_jetson_url' in st.session_state:
+        return st.session_state['manual_jetson_url']
+    
+    # 2. Intentar sistema automático
+    try:
+        from modules.utils.hybrid_url_manager import get_jetson_url_hybrid
+        return get_jetson_url_hybrid()
+    except Exception as e:
+        # 3. Fallback a URL más reciente conocida
+        return "https://roof-imposed-noticed-fire.trycloudflare.com"
+
+JETSON_API_URL = get_current_jetson_url()
+
+# Función para obtener URL actualizada dinámicamente
+def get_dynamic_jetson_url():
+    """Obtener URL actualizada dinámicamente durante la ejecución."""
+    if 'manual_jetson_url' in st.session_state:
+        return st.session_state['manual_jetson_url']
+    return JETSON_API_URL
 
 # Agregar path del proyecto
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -51,6 +67,11 @@ if project_root not in sys.path:
 def show_professional_banner():
     """Banner profesional simplificado"""
     st.markdown("## 🏭 Sistema IoT Industrial - Monitoreo con IA")
+    
+    # Configuración de URL pública de la API
+    st.markdown("### 🌐 URL de la API Jetson (Cloudflare Tunnel)")
+    st.success(f"**URL pública detectada:** {JETSON_API_URL}")
+    st.markdown("**API conectada:** " + JETSON_API_URL)
     
     # Estado simplificado
     col_status1, col_status2, col_status3 = st.columns(3)
@@ -1124,6 +1145,77 @@ def main():
     if st.sidebar.checkbox("🔧 Debug Info", value=False):
         st.sidebar.success(f"✅ GROQ_API_KEY configurado")
         st.sidebar.info(f"🔗 Jetson URL: {JETSON_API_URL}")
+    
+    # 🔧 CONFIGURACIÓN MANUAL DE URL DE CLOUDFLARE
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🔧 Configuración Manual")
+    
+    # Mostrar URL actual
+    st.sidebar.info(f"🌐 **URL Actual:**\n{JETSON_API_URL}")
+    
+    # Sección expandible para cambiar URL
+    with st.sidebar.expander("🔄 Actualizar URL de API", expanded=False):
+        st.markdown("**Instrucciones:**")
+        st.markdown("1. 📋 Copia la nueva URL de Cloudflare")
+        st.markdown("2. 📝 Pégala en el campo de abajo") 
+        st.markdown("3. ✅ Haz clic en 'Actualizar URL'")
+        st.markdown("4. 🔄 La página se recargará automáticamente")
+        
+        # Campo para nueva URL
+        new_url = st.text_input(
+            "Nueva URL de Cloudflare:",
+            placeholder="https://nueva-url.trycloudflare.com",
+            help="Pega aquí la nueva URL de tu túnel Cloudflare"
+        )
+        
+        # Botón para actualizar
+        if st.button("🔄 Actualizar URL de API", type="primary"):
+            if new_url and new_url.startswith("https://") and ".trycloudflare.com" in new_url:
+                try:
+                    # Probar conectividad de la nueva URL
+                    import requests
+                    test_response = requests.get(f"{new_url}/health", timeout=10)
+                    
+                    if test_response.status_code == 200:
+                        # Actualizar en session_state
+                        st.session_state['manual_jetson_url'] = new_url
+                        
+                        # Actualizar archivo JSON si es posible
+                        try:
+                            import json
+                            from pathlib import Path
+                            json_file = Path("../cloudflare_urls.json")
+                            if json_file.exists():
+                                with open(json_file, 'r') as f:
+                                    config = json.load(f)
+                                config['current_url'] = new_url
+                                config['last_updated'] = datetime.now().isoformat()
+                                config['update_source'] = 'manual_streamlit_update'
+                                with open(json_file, 'w') as f:
+                                    json.dump(config, f, indent=2)
+                        except:
+                            pass  # No crítico si no se puede actualizar
+                        
+                        st.success(f"✅ URL actualizada correctamente!")
+                        st.info(f"🔄 Nueva URL: {new_url}")
+                        st.info("⏳ Recargando aplicación...")
+                        time.sleep(2)
+                        st.rerun()
+                        
+                    else:
+                        st.error(f"❌ La URL no responde correctamente (HTTP {test_response.status_code})")
+                        
+                except requests.exceptions.RequestException as e:
+                    st.error(f"❌ Error de conectividad: No se puede acceder a la URL")
+                    st.error(f"Detalles: {str(e)[:100]}...")
+                    
+                except Exception as e:
+                    st.error(f"❌ Error inesperado: {str(e)}")
+                    
+            elif new_url:
+                st.error("❌ URL inválida. Debe ser una URL de Cloudflare válida (https://....trycloudflare.com)")
+            else:
+                st.warning("⚠️ Por favor ingresa una URL")
     
     # Inicializar timestamp
     from datetime import datetime

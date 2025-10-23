@@ -1,25 +1,30 @@
-name: 🔄 Auto-Update Cloudflare URLs
+name: 🔄 Smart Cloudflare URL Detection
 
 on:
   schedule:
-    # Ejecutar cada 5 minutos para detectar cambios rápidamente
-    - cron: '*/5 * * * *'
+    # Ejecutar cada 10 minutos (más conservador para evitar límites)
+    - cron: '*/10 * * * *'
   
   # Permitir ejecución manual
   workflow_dispatch:
     inputs:
       force_update:
-        description: 'Forzar actualización de URLs'
+        description: 'Forzar detección y actualización de URLs'
+        required: false
+        default: false
+        type: boolean
+      test_mode:
+        description: 'Modo de prueba (no actualizar archivos)'
         required: false
         default: false
         type: boolean
 
-  # Ejecutar cuando se detecten cambios en archivos relevantes
+  # Ejecutar cuando se detecten cambios en archivos de configuración
   push:
     paths:
-      - 'modules/utils/cloudflare_url_manager.py'
-      - 'modules/utils/jetson_url_config.py'
-      - 'url_update_automation.py'
+      - 'cloudflare_urls.json'
+      - 'modules/utils/ultra_robust_cloudflare_manager.py'
+      - '.github/workflows/cloudflare-url-update.yml'
 
 jobs:
   update-cloudflare-urls:
@@ -42,36 +47,133 @@ jobs:
         python -m pip install --upgrade pip
         pip install requests
 
-    - name: 🔍 Check for URL changes
-      id: check_changes
+    - name: 🔍 Detect Cloudflare URL changes
+      id: detect_changes
       run: |
-        echo "Starting Cloudflare URL check..."
+        echo "🚀 Starting smart Cloudflare URL detection..."
         
-        # Ejecutar el script de automatización
-        if [ "${{ github.event.inputs.force_update }}" == "true" ]; then
-          echo "🔄 Forcing URL update..."
-          python url_update_automation.py --update --force
-        else
-          echo "🔍 Checking for URL changes..."
-          python url_update_automation.py --update
-        fi
+        # Instalar dependencias adicionales si es necesario
+        pip install beautifulsoup4
+        
+        # Crear script de detección en línea
+        cat > detect_cloudflare_url.py << 'EOF'
+        import requests
+        import json
+        import re
+        import time
+        from datetime import datetime
+        
+        def detect_current_url():
+            """Detectar URL actual usando múltiples estrategias."""
+            
+            # URLs candidatas conocidas para probar
+            candidate_urls = [
+                "https://returned-convenience-tower-switched.trycloudflare.com",
+                "https://reflect-wed-governmental-fisher.trycloudflare.com", 
+                "https://replica-subscriber-permission-restricted.trycloudflare.com",
+            ]
+            
+            print("🔍 Probando URLs candidatas...")
+            
+            working_urls = []
+            for url in candidate_urls:
+                try:
+                    response = requests.get(f"{url}/health", timeout=10)
+                    if response.status_code == 200:
+                        working_urls.append(url)
+                        print(f"  ✅ Funciona: {url}")
+                    else:
+                        print(f"  🟡 HTTP {response.status_code}: {url}")
+                except Exception as e:
+                    print(f"  ❌ Error: {url} - {str(e)[:50]}")
+            
+            if working_urls:
+                return working_urls[0]  # Retornar la primera que funcione
+            
+            print("⚠️ Ninguna URL candidata funciona, intentando descubrimiento...")
+            
+            # TODO: Aquí se podrían agregar más métodos de descubrimiento
+            # Por ahora retornamos None
+            return None
+        
+        def load_current_config():
+            """Cargar configuración actual."""
+            try:
+                with open('cloudflare_urls.json', 'r') as f:
+                    return json.load(f)
+            except:
+                return {"current_url": None}
+        
+        def save_config(config):
+            """Guardar configuración actualizada."""
+            config['last_updated'] = datetime.now().isoformat()
+            with open('cloudflare_urls.json', 'w') as f:
+                json.dump(config, f, indent=2)
+        
+        # Detección principal
+        detected_url = detect_current_url()
+        current_config = load_current_config()
+        current_url = current_config.get('current_url')
+        
+        print(f"\n📊 RESULTADOS:")
+        print(f"  URL actual en config: {current_url}")
+        print(f"  URL detectada: {detected_url}")
+        
+        # Determinar si hay cambios
+        if detected_url and detected_url != current_url:
+            print("🚨 CAMBIO DETECTADO!")
+            
+            # Actualizar configuración
+            current_config['current_url'] = detected_url
+            current_config['metadata'] = {
+                'detection_method': 'github_actions_discovery',
+                'confident': True,
+                'tested': True,
+                'previous_url': current_url
+            }
+            
+            # Actualizar backup_urls
+            if 'backup_urls' not in current_config:
+                current_config['backup_urls'] = []
+            
+            if detected_url not in current_config['backup_urls']:
+                current_config['backup_urls'].insert(0, detected_url)
+            
+            # Mantener solo las últimas 5 URLs
+            current_config['backup_urls'] = current_config['backup_urls'][:5]
+            
+            save_config(current_config)
+            
+            print("✅ Configuración actualizada")
+            return True
+        else:
+            print("ℹ️ No hay cambios")
+            return False
+        
+        if __name__ == "__main__":
+            has_changes = detect_current_url()
+            exit(0 if has_changes else 1)
+        EOF
+        
+        # Ejecutar detección
+        python detect_cloudflare_url.py
+        DETECTION_RESULT=$?
         
         # Verificar si hay cambios en git
-        if git diff --quiet && git diff --cached --quiet; then
+        if git diff --quiet cloudflare_urls.json; then
           echo "changes_detected=false" >> $GITHUB_OUTPUT
-          echo "✅ No changes detected"
+          echo "✅ No changes in configuration"
         else
           echo "changes_detected=true" >> $GITHUB_OUTPUT
-          echo "🚨 Changes detected!"
+          echo "🚨 Configuration updated!"
           
-          # Mostrar los archivos que cambiaron
-          echo "Files changed:"
-          git diff --name-only
-          git diff --cached --name-only
+          # Mostrar cambios
+          echo "Changes in cloudflare_urls.json:"
+          git diff cloudflare_urls.json
         fi
 
     - name: 📊 Generate change report
-      if: steps.check_changes.outputs.changes_detected == 'true'
+      if: steps.detect_changes.outputs.changes_detected == 'true'
       run: |
         echo "## 🔄 Cloudflare URL Update Report" > update_report.md
         echo "" >> update_report.md
@@ -98,13 +200,13 @@ jobs:
         echo "*This update was performed automatically by the Cloudflare URL monitoring system.*" >> update_report.md
 
     - name: 🔧 Configure Git
-      if: steps.check_changes.outputs.changes_detected == 'true'
+      if: steps.detect_changes.outputs.changes_detected == 'true'
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "Cloudflare URL Auto-Update"
 
     - name: 💾 Commit and push changes
-      if: steps.check_changes.outputs.changes_detected == 'true'
+      if: steps.detect_changes.outputs.changes_detected == 'true'
       run: |
         # Agregar todos los archivos modificados
         git add .
@@ -131,14 +233,14 @@ jobs:
         echo "✅ Changes committed successfully"
 
     - name: 🚀 Push changes
-      if: steps.check_changes.outputs.changes_detected == 'true'
+      if: steps.detect_changes.outputs.changes_detected == 'true'
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         branch: ${{ github.ref }}
 
     - name: 📢 Post-update notification
-      if: steps.check_changes.outputs.changes_detected == 'true'
+      if: steps.detect_changes.outputs.changes_detected == 'true'
       run: |
         echo "🎉 Cloudflare URL update completed successfully!"
         echo "📊 Summary:"
@@ -159,7 +261,7 @@ jobs:
         "
 
     - name: ℹ️ No changes notification
-      if: steps.check_changes.outputs.changes_detected == 'false'
+      if: steps.detect_changes.outputs.changes_detected == 'false'
       run: |
         echo "ℹ️ No Cloudflare URL changes detected"
         echo "✅ System is up to date"

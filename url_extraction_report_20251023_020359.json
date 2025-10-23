@@ -1,0 +1,28 @@
+{
+  "extraction_result": {
+    "url": null,
+    "success": false,
+    "timestamp": "2025-10-23T02:03:59.960683"
+  },
+  "metadata": {
+    "attempts": 3,
+    "errors": [
+      "No se encontraron URLs en el HTML",
+      "No se encontraron URLs en el HTML",
+      "No se encontraron URLs en el HTML"
+    ],
+    "html_length": 4271,
+    "urls_found": [],
+    "working_urls": [],
+    "dashboard_url": "https://iotapp-jvwtoekeo73ruxn9mdhfnc.streamlit.app",
+    "total_time": 8.870525121688843,
+    "timestamp": "2025-10-23T02:03:59.960683",
+    "success": false
+  },
+  "dashboard_url": "https://iotapp-jvwtoekeo73ruxn9mdhfnc.streamlit.app",
+  "extractor_config": {
+    "timeout": 30,
+    "max_retries": 3,
+    "retry_delay": 2
+  }
+}
