@@ -263,7 +263,7 @@ def display_reports_interface():
         
         time_period = st.selectbox(
             "📅 Período",
-            [("24h", "Últimas 24 horas"), ("48h", "Últimas 48 horas"), ("168h", "Última semana")],
+            [("720h", "Último mes (30 días)"), ("168h", "Última semana"), ("48h", "Últimas 48 horas"), ("24h", "Últimas 24 horas")],
             format_func=lambda x: x[1]
         )
     
@@ -696,6 +696,11 @@ def generate_intelligent_report(report_generator, report_type, all_data, devices
             filtered_data = all_data
         
         st.info(f"📊 Analizando {len(filtered_data)} registros reales filtrados")
+        
+        # DIAGNÓSTICO: Mostrar muestra de datos
+        if filtered_data:
+            sample_record = filtered_data[0]
+            st.info(f"🔍 Muestra de datos: device_id={sample_record.get('device_id')}, sensor_type={sample_record.get('sensor_type')}, timestamp={sample_record.get('timestamp', sample_record.get('created_at'))}")
         
         # Sistema robusto: intentar generador avanzado, fallback a análisis básico inteligente
         report_result = None

@@ -124,12 +124,18 @@ class SmartAnalyzer:
             if df['timestamp'].dtype == 'object':
                 df['timestamp'] = pd.to_datetime(df['timestamp'])
             
-            # Filtrar por período de análisis
+            # Filtrar por período de análisis (con fallback a todos los datos)
             cutoff_time = datetime.now() - timedelta(hours=analysis_hours)
             df_filtered = df[df['timestamp'] >= cutoff_time].copy()
             
+            # Si no hay datos en el período especificado, usar todos los datos disponibles
             if df_filtered.empty:
-                return self._create_empty_analysis(f"No hay datos en las últimas {analysis_hours} horas")
+                self.logger.warning(f"No hay datos en las últimas {analysis_hours}h, usando todos los datos disponibles")
+                df_filtered = df.copy()
+                analysis_hours = 24 * 30  # Marcar como análisis de datos históricos (30 días)
+            
+            if df_filtered.empty:
+                return self._create_empty_analysis("No hay datos disponibles para análisis")
             
             # Preparar estructura de análisis
             analysis_result = {
