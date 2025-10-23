@@ -278,24 +278,44 @@ class DynamicSensorDetector:
     async def _fetch_recent_data(self, hours: int = 24) -> List[Dict[str, Any]]:
         """Obtiene datos recientes para análisis"""
         try:
-            # Usar el endpoint estándar de la API
-            url = f"{self.jetson_api_url}/api/get_recent_data"
-            params = {'hours': hours}
+            # Usar DirectJetsonConnector con endpoint /data correcto
+            from modules.tools.direct_jetson_connector import DirectJetsonConnector
             
-            response = requests.get(url, params=params, timeout=30)
+            connector = DirectJetsonConnector(self.jetson_api_url)
+            data_result = connector.get_all_data_simple()
             
-            if response.status_code == 200:
-                data = response.json()
+            if data_result.get('status') == 'success':
+                sensor_data = data_result.get('sensor_data', [])
+                self.logger.info(f"✅ Obtenidos {len(sensor_data)} registros desde endpoint /data")
                 
-                if data.get('status') == 'success':
-                    sensor_data = data.get('sensor_data', [])
-                    self.logger.info(f"✅ Obtenidos {len(sensor_data)} registros para análisis")
-                    return sensor_data
+                # Aplicar filtro de tiempo si es necesario
+                if hours and hours < 168:  # Solo filtrar si es menos de una semana
+                    from datetime import datetime, timedelta
+                    cutoff_time = datetime.now() - timedelta(hours=hours)
+                    filtered_data = []
+                    
+                    for record in sensor_data:
+                        try:
+                            timestamp_str = record.get('timestamp', record.get('created_at', ''))
+                            if timestamp_str:
+                                if 'T' in timestamp_str:
+                                    record_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                                else:
+                                    record_time = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+                                
+                                if record_time >= cutoff_time:
+                                    filtered_data.append(record)
+                            else:
+                                filtered_data.append(record)
+                        except:
+                            filtered_data.append(record)
+                    
+                    self.logger.info(f"✅ Filtrados {len(filtered_data)} registros de últimas {hours}h")
+                    return filtered_data
                 else:
-                    self.logger.warning(f"⚠️ API retornó estado: {data.get('status')}")
-                    return []
+                    return sensor_data
             else:
-                self.logger.error(f"❌ Error HTTP {response.status_code} obteniendo datos")
+                self.logger.warning(f"⚠️ DirectJetsonConnector falló: {data_result.get('error', 'Unknown')}")
                 return []
                 
         except Exception as e:
