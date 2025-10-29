@@ -182,8 +182,9 @@ class CloudIoTAgent:
             self.direct_connector = DirectJetsonConnector(self.jetson_api_url)
             logger.info("✅ DirectJetsonConnector inicializado")
             
-            # PRIORIDAD 2: Conector tradicional (fallback)
-            self.jetson_connector = JetsonAPIConnector(base_url=self.jetson_api_url)
+            # USAR DirectJetsonConnector como conector principal (es el que funciona)
+            self.jetson_connector = self.direct_connector
+            logger.info("✅ jetson_connector configurado como DirectJetsonConnector")
             
             # PRIORIDAD 3: Agente directo (último fallback)
             self.direct_api_agent = create_direct_api_agent(self.jetson_api_url)

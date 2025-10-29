@@ -188,3 +188,27 @@ class DirectJetsonConnector:
         except Exception as e:
             logger.error(f"❌ Error en obtención completa: {e}")
             raise Exception(f"Fallo en obtención completa de datos: {str(e)}")
+    
+    def get_sensor_data(self, device_id: str = None, limit: int = 100) -> List[Dict[str, Any]]:
+        """
+        MÉTODO DE COMPATIBILIDAD - Wrapper para get_sensor_data_direct()
+        
+        Este método existe para mantener compatibilidad con CloudIoTAgent
+        que espera get_sensor_data() pero el DirectJetsonConnector usa get_sensor_data_direct()
+        """
+        logger.info(f"🔄 Usando wrapper get_sensor_data() -> get_sensor_data_direct()")
+        return self.get_sensor_data_direct(device_id=device_id, limit=limit)
+    
+    def get_devices(self) -> List[Dict[str, Any]]:
+        """
+        MÉTODO DE COMPATIBILIDAD - Wrapper para get_devices_direct()
+        """
+        logger.info(f"🔄 Usando wrapper get_devices() -> get_devices_direct()")
+        return self.get_devices_direct()
+    
+    def get_health_status(self) -> Dict[str, Any]:
+        """
+        MÉTODO DE COMPATIBILIDAD - Wrapper para test_connection()
+        """
+        logger.info(f"🔄 Usando wrapper get_health_status() -> test_connection()")
+        return self.test_connection()
