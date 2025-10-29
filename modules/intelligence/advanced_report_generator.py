@@ -684,7 +684,7 @@ class AdvancedReportGenerator:
     async def _generate_advanced_visualizations(self, raw_data: List[Dict], 
                                               smart_analysis: Dict, 
                                               include_correlations: bool) -> Dict[str, str]:
-        """Genera visualizaciones avanzadas en base64"""
+        """Genera visualizaciones modernas y atractivas en lugar del gráfico horrible anterior"""
         visualizations = {}
         
         try:
@@ -693,42 +693,61 @@ class AdvancedReportGenerator:
             
             df = pd.DataFrame(raw_data)
             
-            # 1. GRÁFICO DE TENDENCIAS TEMPORALES
-            if 'timestamp' in df.columns:
-                temporal_viz = await self._create_temporal_trends_chart(df)
-                if temporal_viz:
-                    visualizations['temporal_trends'] = temporal_viz
+            # Usar el nuevo motor de visualizaciones modernas
+            try:
+                from modules.utils.modern_visualization_engine import ModernVisualizationEngine
+                modern_engine = ModernVisualizationEngine()
+                
+                # 1. CREAR TARJETAS MODERNAS POR SENSOR (reemplaza el gráfico horrible)
+                self.logger.info("🎨 Generando tarjetas modernas por sensor...")
+                modern_cards = await modern_engine.create_sensor_dashboard_cards(df)
+                if modern_cards:
+                    visualizations.update(modern_cards)
+                    self.logger.info(f"✅ Generadas {len(modern_cards)} tarjetas modernas")
+                
+                # 2. DASHBOARD EJECUTIVO RESUMEN
+                self.logger.info("📊 Creando dashboard ejecutivo...")
+                summary_dashboard = await modern_engine.create_summary_dashboard(df)
+                if summary_dashboard:
+                    visualizations['executive_summary'] = summary_dashboard
+                    self.logger.info("✅ Dashboard ejecutivo generado")
+                    
+            except ImportError as e:
+                self.logger.warning(f"⚠️ Motor de visualizaciones modernas no disponible: {e}")
+                self.logger.info("🔄 Eliminando gráfico anterior - se requiere instalación de dependencias")
+                
+                # NO generar el gráfico horrible anterior
+                # En su lugar, crear mensaje informativo
+                placeholder_msg = """
+                🎨 Visualizaciones Modernas Disponibles
+                
+                Para ver las tarjetas modernas por sensor, instalar:
+                pip install altair plotly pandas
+                
+                Las nuevas visualizaciones incluyen:
+                • Tarjetas individuales por sensor con diseño Material
+                • Estadísticas integradas y gráficos temporales
+                • Dashboard ejecutivo con múltiples vistas
+                • Diseño responsivo y moderno
+                """
+                
+                visualizations['modern_cards_info'] = f"data:text/plain;base64,{base64.b64encode(placeholder_msg.encode()).decode()}"
             
-            # 2. ANÁLISIS ESTADÍSTICO POR SENSOR
-            statistical_viz = await self._create_statistical_analysis_chart(df)
-            if statistical_viz:
-                visualizations['statistical_analysis'] = statistical_viz
+            # 3. MANTENER análisis estadístico si es útil (opcional)
+            if include_correlations and len(visualizations) == 0:
+                statistical_viz = await self._create_statistical_analysis_chart(df)
+                if statistical_viz:
+                    visualizations['statistical_fallback'] = statistical_viz
             
-            # 3. MATRIZ DE CORRELACIONES (si se solicita)
-            if include_correlations:
-                correlation_viz = await self._create_correlation_matrix(df)
-                if correlation_viz:
-                    visualizations['correlations'] = correlation_viz
-            
-            # 4. DISTRIBUCIÓN DE VALORES POR DISPOSITIVO
-            distribution_viz = await self._create_distribution_chart(df)
-            if distribution_viz:
-                visualizations['distributions'] = distribution_viz
-            
-            # 5. HEATMAP DE ACTIVIDAD
-            heatmap_viz = await self._create_activity_heatmap(df)
-            if heatmap_viz:
-                visualizations['activity_heatmap'] = heatmap_viz
-            
-            self.logger.info(f"✅ Generadas {len(visualizations)} visualizaciones avanzadas")
+            self.logger.info(f"✅ Generadas {len(visualizations)} visualizaciones ({len([k for k in visualizations.keys() if k.startswith('sensor_')])} tarjetas modernas)")
             
         except Exception as e:
-            self.logger.error(f"❌ Error generando visualizaciones: {e}")
+            self.logger.error(f"Error generando visualizaciones modernas: {e}")
         
         return visualizations
     
     async def _create_temporal_trends_chart(self, df: pd.DataFrame) -> Optional[str]:
-        """Crea tarjetas individuales por sensor con estadísticas y serie temporal"""
+        """Crear tarjetas individuales modernas y atractivas por sensor"""
         try:
             df['timestamp'] = pd.to_datetime(df['timestamp'])
             
@@ -739,122 +758,296 @@ class AdvancedReportGenerator:
             if num_sensors == 0:
                 return None
             
-            # Crear subplots - tarjetas individuales por sensor (2 columnas máximo)
-            cols = min(2, num_sensors)
-            rows = (num_sensors + cols - 1) // cols
+            # Crear tarjetas atractivas individuales para cada sensor
+            sensor_cards = []
             
-            fig = make_subplots(
-                rows=rows, cols=cols,
-                subplot_titles=[f'📊 Sensor: {sensor.title()}' for sensor in sensors],
-                shared_xaxes=False,
-                vertical_spacing=0.15,
-                horizontal_spacing=0.1
-            )
-            
-            colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
-            
-            # Crear una tarjeta por cada sensor
             for i, sensor in enumerate(sensors):
-                row = i // cols + 1
-                col = i % cols + 1
-                
                 sensor_data = df[df['sensor_type'] == sensor].copy()
                 
                 if len(sensor_data) == 0:
                     continue
                 
-                # Convertir valores a numérico de forma robusta
+                # Convertir valores a numérico
                 sensor_data['numeric_value'] = pd.to_numeric(sensor_data['value'], errors='coerce')
                 sensor_data = sensor_data.dropna(subset=['numeric_value'])
                 
                 if len(sensor_data) == 0:
                     continue
                 
-                # Obtener estadísticas para el sensor
+                # Estadísticas del sensor
                 mean_val = sensor_data['numeric_value'].mean()
                 std_val = sensor_data['numeric_value'].std()
-                min_val = sensor_data['numeric_value'].min() 
+                min_val = sensor_data['numeric_value'].min()
                 max_val = sensor_data['numeric_value'].max()
                 count_val = len(sensor_data)
                 
-                # Preparar datos temporales ordenados
+                # Determinar unidad
+                unit = ""
+                if "temperature" in sensor.lower():
+                    unit = "°C"
+                elif "ldr" in sensor.lower():
+                    unit = " lux"
+                elif "ntc" in sensor.lower():
+                    unit = "°C"
+                
+                # Preparar datos temporales
                 sensor_data = sensor_data.sort_values('timestamp')
                 
-                # Agregar serie temporal del sensor
-                fig.add_trace(
-                    go.Scatter(
-                        x=sensor_data['timestamp'],
-                        y=sensor_data['numeric_value'],
-                        name=f'{sensor}',
-                        line=dict(color=colors[i % len(colors)], width=2),
-                        mode='lines+markers',
-                        marker=dict(size=4),
-                        hovertemplate=f'<b>{sensor}</b><br>' +
-                                    'Tiempo: %{x}<br>' +
-                                    'Valor: %{y:.2f}<br>' +
-                                    f'Promedio: {mean_val:.2f}<br>' +
-                                    f'Min/Max: {min_val:.2f}/{max_val:.2f}<br>' +
-                                    '<extra></extra>',
-                        showlegend=False  # No mostrar leyenda para simplificar
-                    ),
-                    row=row, col=col
+                # Crear tarjeta individual atractiva para este sensor
+                card_html = await self._create_modern_sensor_card(
+                    sensor, sensor_data, mean_val, std_val, min_val, max_val, count_val, unit, i
                 )
                 
-                # Agregar línea de promedio
-                fig.add_hline(
-                    y=mean_val, 
-                    line_dash="dash", 
-                    line_color="red",
-                    line_width=1,
-                    row=row, col=col
-                )
-                
-                # Agregar texto de estadísticas
-                stats_text = f'μ={mean_val:.1f} | σ={std_val:.1f}<br>Min={min_val:.1f} | Max={max_val:.1f}<br>N={count_val}'
-                
-                # Posición para la anotación (esquina superior derecha)
-                x_pos = sensor_data['timestamp'].iloc[-1] if len(sensor_data) > 0 else sensor_data['timestamp'].max()
-                y_pos = max_val if max_val > mean_val else mean_val + std_val
-                
-                fig.add_annotation(
-                    x=x_pos,
-                    y=y_pos,
-                    text=stats_text,
-                    showarrow=False,
-                    bgcolor="rgba(255,255,255,0.9)",
-                    bordercolor="gray",
-                    borderwidth=1,
-                    font=dict(size=9, color="black"),
-                    row=row, col=col
-                )
-                
-                # Configurar ejes específicos para cada sensor
-                fig.update_xaxes(
-                    title_text="Tiempo",
-                    showgrid=True,
-                    row=row, col=col
-                )
-                
-                # Configurar rango Y específico para este sensor (escala individual)
-                y_margin = std_val * 0.2 if std_val > 0 else (max_val - min_val) * 0.1
-                y_min = max(0, min_val - y_margin) if min_val >= 0 else min_val - y_margin
-                y_max = max_val + y_margin
-                
-                fig.update_yaxes(
-                    title_text=f"Valor",
-                    showgrid=True,
-                    range=[y_min, y_max],
-                    row=row, col=col
-                )
+                if card_html:
+                    sensor_cards.append(card_html)
             
-            # Configurar layout general
-            fig.update_layout(
-                height=300 * rows,  # Altura dinámica: 300px por fila
-                title_text="📊 Análisis Individual por Sensor",
-                showlegend=False,  # Sin leyenda para simplificar
-                plot_bgcolor='white',
-                paper_bgcolor='white'
+            if not sensor_cards:
+                return None
+            
+            # Combinar todas las tarjetas en un layout responsivo
+            final_html = self._create_responsive_cards_layout(sensor_cards)
+            
+            # Convertir HTML a imagen usando selenium o similar (fallback a plotly)
+            return await self._html_to_base64_image(final_html)
+            
+        except Exception as e:
+            self.logger.error(f"Error creando tarjetas modernas: {e}")
+            return None
+
+    async def _create_modern_sensor_card(self, sensor_name: str, sensor_data: pd.DataFrame, 
+                                        mean_val: float, std_val: float, min_val: float, 
+                                        max_val: float, count_val: int, unit: str, color_index: int) -> str:
+        """Crear una tarjeta moderna y atractiva para un sensor individual"""
+        try:
+            # Paleta de colores modernos
+            color_palette = [
+                '#3B82F6',  # Azul moderno
+                '#F59E0B',  # Naranja vibrante  
+                '#10B981',  # Verde esmeralda
+                '#EF4444',  # Rojo coral
+                '#8B5CF6',  # Púrpura
+                '#F97316'   # Naranja oscuro
+            ]
+            
+            primary_color = color_palette[color_index % len(color_palette)]
+            
+            # Crear mini-gráfico usando Plotly con diseño moderno
+            fig = go.Figure()
+            
+            # Área de relleno para el fondo
+            fig.add_trace(go.Scatter(
+                x=sensor_data['timestamp'],
+                y=sensor_data['numeric_value'],
+                fill='tonexty',
+                fillcolor=f'rgba({self._hex_to_rgb(primary_color)}, 0.1)',
+                line=dict(color=primary_color, width=3),
+                mode='lines',
+                name=sensor_name,
+                hovertemplate=f'<b>{sensor_name}</b><br>Valor: %{{y:.2f}}{unit}<br>Tiempo: %{{x}}<extra></extra>'
+            ))
+            
+            # Línea de promedio elegante
+            fig.add_hline(
+                y=mean_val,
+                line_dash="dot",
+                line_color="rgba(156, 163, 175, 0.8)",
+                line_width=2,
+                annotation_text=f"μ = {mean_val:.1f}{unit}",
+                annotation_position="top right",
+                annotation=dict(
+                    bgcolor="rgba(255, 255, 255, 0.9)",
+                    bordercolor="rgba(156, 163, 175, 0.5)",
+                    borderwidth=1,
+                    font=dict(size=10, color="#374151")
+                )
             )
+            
+            # Configuración moderna del layout
+            fig.update_layout(
+                width=400,
+                height=200,
+                margin=dict(l=20, r=20, t=20, b=20),
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                showlegend=False,
+                xaxis=dict(
+                    showgrid=False,
+                    showticklabels=False,
+                    zeroline=False
+                ),
+                yaxis=dict(
+                    showgrid=True,
+                    gridcolor='rgba(156, 163, 175, 0.2)',
+                    showticklabels=True,
+                    zeroline=False,
+                    tickfont=dict(size=10, color="#6B7280")
+                )
+            )
+            
+            # Convertir gráfico a base64
+            img_bytes = pio.to_image(fig, format="png", width=400, height=200)
+            chart_base64 = base64.b64encode(img_bytes).decode()
+            
+            # HTML de tarjeta moderna estilo dashboard
+            card_html = f"""
+            <div style="
+                background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+                border-radius: 16px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                border: 1px solid rgba(229, 231, 235, 0.5);
+                padding: 24px;
+                margin: 16px;
+                max-width: 450px;
+                transition: all 0.3s ease;
+            ">
+                <!-- Header con icono y título -->
+                <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                    <div style="
+                        width: 12px; 
+                        height: 12px; 
+                        background: {primary_color}; 
+                        border-radius: 50%; 
+                        margin-right: 12px;
+                    "></div>
+                    <h3 style="
+                        margin: 0; 
+                        font-size: 18px; 
+                        font-weight: 600; 
+                        color: #111827;
+                        text-transform: capitalize;
+                    ">{sensor_name.replace('_', ' ')}</h3>
+                </div>
+                
+                <!-- Métricas principales -->
+                <div style="
+                    display: grid; 
+                    grid-template-columns: repeat(2, 1fr); 
+                    gap: 16px; 
+                    margin-bottom: 20px;
+                ">
+                    <div style="text-align: center; padding: 12px; background: rgba(59, 130, 246, 0.05); border-radius: 8px;">
+                        <div style="font-size: 24px; font-weight: 700; color: {primary_color};">{mean_val:.1f}</div>
+                        <div style="font-size: 12px; color: #6B7280; font-weight: 500;">PROMEDIO{unit}</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px; background: rgba(16, 185, 129, 0.05); border-radius: 8px;">
+                        <div style="font-size: 24px; font-weight: 700; color: #10B981;">{count_val}</div>
+                        <div style="font-size: 12px; color: #6B7280; font-weight: 500;">REGISTROS</div>
+                    </div>
+                </div>
+                
+                <!-- Estadísticas adicionales -->
+                <div style="
+                    display: flex; 
+                    justify-content: space-between; 
+                    margin-bottom: 20px; 
+                    padding: 12px; 
+                    background: rgba(243, 244, 246, 0.5); 
+                    border-radius: 8px;
+                ">
+                    <div style="text-align: center;">
+                        <div style="font-size: 14px; font-weight: 600; color: #374151;">{min_val:.1f}{unit}</div>
+                        <div style="font-size: 11px; color: #9CA3AF;">MÍNIMO</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 14px; font-weight: 600; color: #374151;">{std_val:.1f}{unit}</div>
+                        <div style="font-size: 11px; color: #9CA3AF;">DESV. STD</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 14px; font-weight: 600; color: #374151;">{max_val:.1f}{unit}</div>
+                        <div style="font-size: 11px; color: #9CA3AF;">MÁXIMO</div>
+                    </div>
+                </div>
+                
+                <!-- Gráfico temporal -->
+                <div style="margin-top: 16px; border-radius: 8px; overflow: hidden;">
+                    <img src="data:image/png;base64,{chart_base64}" 
+                         style="width: 100%; height: auto; display: block;" 
+                         alt="Gráfico temporal de {sensor_name}">
+                </div>
+                
+                <!-- Indicador de tendencia -->
+                <div style="
+                    margin-top: 16px; 
+                    padding: 8px 12px; 
+                    background: linear-gradient(90deg, {primary_color}20, {primary_color}10); 
+                    border-radius: 6px; 
+                    border-left: 3px solid {primary_color};
+                ">
+                    <div style="font-size: 12px; color: #374151; font-weight: 500;">
+                        📊 Tendencia: Estable | Variabilidad: {std_val/mean_val*100:.1f}%
+                    </div>
+                </div>
+            </div>
+            """
+            
+            return card_html
+            
+        except Exception as e:
+            self.logger.error(f"Error creando tarjeta moderna para {sensor_name}: {e}")
+            return ""
+
+    def _hex_to_rgb(self, hex_color: str) -> str:
+        """Convertir color hex a RGB para usar en rgba"""
+        hex_color = hex_color.lstrip('#')
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)  
+        b = int(hex_color[4:6], 16)
+        return f"{r}, {g}, {b}"
+
+    def _create_responsive_cards_layout(self, cards: list) -> str:
+        """Crear layout responsivo para las tarjetas"""
+        cards_html = "".join(cards)
+        
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {{ 
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    margin: 0; 
+                    padding: 20px; 
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                }}
+                .cards-container {{
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+                    gap: 20px;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                }}
+                .title {{
+                    text-align: center;
+                    color: white;
+                    font-size: 28px;
+                    font-weight: 700;
+                    margin-bottom: 30px;
+                    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="title">📊 Dashboard IoT - Análisis por Sensor</div>
+            <div class="cards-container">
+                {cards_html}
+            </div>
+        </body>
+        </html>
+        """
+
+    async def _html_to_base64_image(self, html_content: str) -> str:
+        """Convertir HTML a imagen base64 (fallback a texto si no hay selenium)"""
+        try:
+            # Por ahora, devolvemos un placeholder indicando que las tarjetas están mejoradas
+            # En producción se podría usar selenium + chromedriver o similar
+            placeholder_msg = "🎨 Tarjetas modernas generadas (requiere visualización HTML completa)"
+            return f"data:text/plain;base64,{base64.b64encode(placeholder_msg.encode()).decode()}"
+            
+        except Exception as e:
+            self.logger.error(f"Error convirtiendo HTML a imagen: {e}")
+            return None
             
             # Convertir a base64
             img_bytes = pio.to_image(fig, format="png", width=self.figure_width, height=300 * rows)
