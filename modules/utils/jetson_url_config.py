@@ -38,7 +38,7 @@ try:
 except ImportError:
     # Fallback en caso de que no se pueda importar
     def get_jetson_url() -> str:
-        return os.getenv('JETSON_API_URL', 'https://replica-subscriber-permission-restricted.trycloudflare.com')
+        return os.getenv('JETSON_API_URL', 'https://along-critical-decorative-physics.trycloudflare.com')
     
     def get_jetson_url_for_env() -> str:
         return get_jetson_url()

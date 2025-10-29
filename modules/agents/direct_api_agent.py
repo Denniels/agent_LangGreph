@@ -498,7 +498,7 @@ def create_direct_api_agent(base_url: str = None) -> DirectAPIAgent:
     """
     if not base_url:
         # Usar la misma URL que funciona en el frontend
-        base_url = "https://replica-subscriber-permission-restricted.trycloudflare.com"
+        base_url = "https://along-critical-decorative-physics.trycloudflare.com"
     
     return DirectAPIAgent(base_url)
 
