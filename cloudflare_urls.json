@@ -1,18 +1,19 @@
 {
-  "current_url": "https://roof-imposed-noticed-fire.trycloudflare.com",
+  "current_url": "https://along-critical-decorative-physics.trycloudflare.com",
   "backup_urls": [
+    "https://along-critical-decorative-physics.trycloudflare.com",
     "https://roof-imposed-noticed-fire.trycloudflare.com",
     "https://returned-convenience-tower-switched.trycloudflare.com",
     "https://reflect-wed-governmental-fisher.trycloudflare.com"
   ],
-  "last_updated": "2025-10-23T02:20:00Z",
-  "update_source": "user_screenshots_manual_update",
+  "last_updated": "2025-10-29T12:48:59.424647",
+  "update_source": "auto_updater_script",
   "dashboard_url": "https://iotapp-jvwtoekeo73ruxn9mdhfnc.streamlit.app",
   "validation_endpoint": "/health",
   "metadata": {
-    "detection_method": "user_provided_current_url",
+    "detection_method": "manual_or_script_update",
     "confident": true,
-    "tested": false,
-    "notes": "URL actualizada manualmente basada en capturas de pantalla del usuario"
+    "tested": true,
+    "previous_url": "https://along-critical-decorative-physics.trycloudflare.com"
   }
 }

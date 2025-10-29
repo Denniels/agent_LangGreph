@@ -53,7 +53,8 @@ class HybridURLManager:
         
         # URLs conocidas en orden de prioridad (más reciente primero)
         self.known_urls = [
-            "https://roof-imposed-noticed-fire.trycloudflare.com",  # URL ACTUAL CONFIRMADA
+            "https://along-critical-decorative-physics.trycloudflare.com",  # URL ACTUAL NUEVA
+            "https://roof-imposed-noticed-fire.trycloudflare.com",  # URL anterior
             "https://returned-convenience-tower-switched.trycloudflare.com",  # URL anterior
             "https://reflect-wed-governmental-fisher.trycloudflare.com",  # URL más antigua
         ]

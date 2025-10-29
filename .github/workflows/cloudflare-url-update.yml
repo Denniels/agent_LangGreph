@@ -47,13 +47,23 @@ jobs:
         python -m pip install --upgrade pip
         pip install requests
 
-    - name: 🔍 Detect Cloudflare URL changes
-      id: detect_changes
+    - name: 🔍 Detect and Update Cloudflare URLs
+      id: detect_changes  
       run: |
-        echo "🚀 Starting smart Cloudflare URL detection..."
+        echo "🚀 Starting smart Cloudflare URL detection and update..."
         
-        # Instalar dependencias adicionales si es necesario
-        pip install beautifulsoup4
+        # Usar el nuevo script de actualización
+        python update_cloudflare_url.py --detect
+        
+        # Verificar si hay cambios en git
+        if git diff --quiet && git diff --cached --quiet; then
+          echo "changes_detected=false" >> $GITHUB_OUTPUT
+          echo "✅ No changes detected or needed"
+        else
+          echo "changes_detected=true" >> $GITHUB_OUTPUT
+          echo "🚨 Changes were made!"
+          git status --porcelain
+        fi
         
         # Crear script de detección en línea
         cat > detect_cloudflare_url.py << 'EOF'
@@ -66,8 +76,10 @@ jobs:
         def detect_current_url():
             """Detectar URL actual usando múltiples estrategias."""
             
-            # URLs candidatas conocidas para probar
+            # URLs candidatas conocidas para probar (ACTUALIZADAS)
             candidate_urls = [
+                "https://along-critical-decorative-physics.trycloudflare.com",  # URL ACTUAL CONFIRMADA
+                "https://roof-imposed-noticed-fire.trycloudflare.com",
                 "https://returned-convenience-tower-switched.trycloudflare.com",
                 "https://reflect-wed-governmental-fisher.trycloudflare.com", 
                 "https://replica-subscriber-permission-restricted.trycloudflare.com",
