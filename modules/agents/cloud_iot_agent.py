@@ -24,7 +24,12 @@ from modules.utils.usage_tracker import usage_tracker
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 
+# Configurar logging más detallado para debugging
 logger = logging.getLogger(__name__)
+
+# Habilitar DEBUG para el módulo de Groq durante desarrollo
+groq_logger = logging.getLogger('modules.agents.groq_integration')
+groq_logger.setLevel(logging.DEBUG)
 
 # 🧠 SISTEMAS DE INTELIGENCIA AVANZADA - INTEGRACIÓN COMPLETA
 try:
@@ -152,8 +157,16 @@ class CloudIoTAgent:
         try:
             logger.info("🚀 Inicializando Cloud IoT Agent...")
             
-            # 1. Inicializar Groq Integration
+            # 1. Inicializar Groq Integration - Compatible con Streamlit Cloud
             groq_api_key = os.getenv("GROQ_API_KEY")
+            
+            # Verificar también Streamlit secrets (para Streamlit Cloud)
+            if not groq_api_key:
+                try:
+                    import streamlit as st
+                    groq_api_key = st.secrets.get("GROQ_API_KEY", None)
+                except:
+                    pass  # No está en contexto Streamlit
             
             if groq_api_key == "demo_mode" or not groq_api_key or groq_api_key.startswith("demo"):
                 # Usar modo demo
@@ -162,6 +175,7 @@ class CloudIoTAgent:
             else:
                 # Usar Groq real
                 self.groq_integration = GroqIntegration(api_key=groq_api_key)
+                logger.info("🤖 Usando Groq con API key configurada")
             
             # 2. Inicializar conectores con prioridad
             # PRIORIDAD 1: Conector directo (igual que dashboard exitoso)
@@ -773,30 +787,49 @@ class CloudIoTAgent:
             if intelligent_response:
                 # Usar la respuesta inteligente como base y mejorarla con Groq
                 try:
+                    # VALIDACIÓN DE DATOS ANTES DE ENVIAR A GROQ
+                    logger.info("🔍 Validando datos antes de enviar a Groq...")
+                    
+                    # Verificar que intelligent_response tenga datos reales
+                    if "No hay datos disponibles" in intelligent_response:
+                        logger.warning("⚠️ intelligent_response indica 'No hay datos disponibles'")
+                    
+                    if "dispositivos activos: 0" in intelligent_response.lower():
+                        logger.warning("⚠️ intelligent_response muestra 0 dispositivos activos")
+                    
+                    # Log de datos que se enviarán a Groq
+                    logger.info(f"📤 DATOS PARA GROQ - Dispositivos: {comprehensive_analysis.get('device_analysis', {}).get('total_devices', 0)}")
+                    logger.info(f"📤 DATOS PARA GROQ - Registros: {comprehensive_analysis.get('total_records', 0)}")
+                    logger.info(f"📤 DATOS PARA GROQ - Longitud intelligent_response: {len(intelligent_response)} chars")
+                    
                     # Crear prompt mejorado para Groq usando la respuesta inteligente
                     enhanced_prompt = f"""
-Tienes acceso a un análisis inteligente avanzado de datos IoT. Tu trabajo es tomar este análisis 
-y crear una respuesta conversacional natural y útil para el usuario.
+Eres un asistente especializado en análisis de sistemas IoT. El usuario te ha hecho una consulta sobre su sistema IoT y tienes acceso a análisis detallado de datos REALES.
 
-CONSULTA ORIGINAL DEL USUARIO: {user_query}
+CONSULTA DEL USUARIO: "{user_query}"
 
-ANÁLISIS INTELIGENTE DISPONIBLE:
+DATOS REALES DEL SISTEMA IoT:
 {intelligent_response}
 
-CONTEXTO ADICIONAL:
-- Total de dispositivos activos: {comprehensive_analysis.get('device_analysis', {}).get('total_devices', 0)}
-- Total de sensores: {comprehensive_analysis.get('device_analysis', {}).get('total_sensors', 0)}
-- Registros analizados: {comprehensive_analysis.get('total_records', 0)}
-{f"- Visualizaciones generadas: {visualization_info}" if visualization_info else ""}
+ANÁLISIS TÉCNICO DISPONIBLE:
+- Dispositivos monitoreados: {comprehensive_analysis.get('device_analysis', {}).get('total_devices', 0)} activos
+- Sensores funcionando: {comprehensive_analysis.get('device_analysis', {}).get('total_sensors', 0)} tipos
+- Registros procesados: {comprehensive_analysis.get('total_records', 0)} entradas de datos
+- Estado del sistema: OPERATIVO y reportando datos en tiempo real
+{f"- Visualizaciones disponibles: {visualization_info}" if visualization_info else ""}
 
-Tu respuesta debe:
-1. Ser conversacional y útil
-2. Incluir insights específicos del análisis inteligente
-3. Responder directamente la pregunta del usuario
-4. Mostrar que entiendes los datos en profundidad
-5. Incluir conclusiones y recomendaciones cuando sea apropiado
+INSTRUCCIONES PARA TU RESPUESTA:
+1. Lee cuidadosamente los DATOS REALES del sistema IoT arriba
+2. Responde ESPECÍFICAMENTE a la consulta del usuario usando SOLO los datos reales proporcionados
+3. NO inventes información - usa únicamente los datos del análisis
+4. Si el usuario pregunta por dispositivos/sensores, menciona los nombres exactos que aparecen en los datos
+5. Si pregunta por estadísticas, usa las cifras exactas del análisis
+6. Sé conversacional pero preciso, mostrando que entiendes los datos específicos
+7. Si no tienes información específica sobre algo, di claramente que necesitas más datos
 
-RESPUESTA CONVERSACIONAL:
+IMPORTANTE: Los datos arriba son REALES de un sistema IoT funcionando. No digas "no hay datos" si los datos están claramente mostrados arriba.
+
+RESPONDE DE FORMA CONVERSACIONAL Y ÚTIL:
 """
                     
                     # Generar respuesta mejorada con Groq

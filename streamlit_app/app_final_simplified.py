@@ -15,6 +15,13 @@ import os
 import sys
 import time
 
+# Cargar variables de entorno (compatibilidad local + Streamlit Cloud)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except:
+    pass  # En Streamlit Cloud no necesita dotenv
+
 # Configurar matplotlib ANTES de cualquier otro import
 try:
     import matplotlib

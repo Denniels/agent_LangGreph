@@ -64,6 +64,8 @@ class GroqIntegration:
         
         try:
             logger.info(f"Enviando request a Groq con modelo: {model}")
+            logger.debug(f"📤 PROMPT ENVIADO A GROQ (primeros 500 chars): {prompt[:500]}...")
+            logger.debug(f"📊 LONGITUD DEL PROMPT: {len(prompt)} caracteres")
             
             chat_completion = self.client.chat.completions.create(
                 messages=[
@@ -77,14 +79,15 @@ class GroqIntegration:
                     }
                 ],
                 model=model,
-                max_tokens=1000,
-                temperature=0.1,  # Más bajo para reducir alucinaciones
-                top_p=0.8,        # Más conservador
+                max_tokens=2048,      # Incrementado para análisis más detallados
+                temperature=0.3,      # Ligeramente más alta para respuestas más naturales
+                top_p=0.9,           # Más flexible para vocabulario técnico IoT
                 stream=False
             )
             
             content = chat_completion.choices[0].message.content
-            logger.info(f"Respuesta exitosa de Groq: {len(content)} caracteres")
+            logger.info(f"✅ Respuesta exitosa de Groq: {len(content)} caracteres")
+            logger.debug(f"📥 RESPUESTA DE GROQ (primeros 300 chars): {content[:300]}...")
             return content
                 
         except Exception as e:
