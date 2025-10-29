@@ -830,19 +830,47 @@ def generate_intelligent_report(report_generator, report_type, all_data, devices
                         if hasattr(section, 'visualizations') and section.visualizations:
                             # Manejar tanto dict como list de visualizaciones
                             if isinstance(section.visualizations, dict):
-                                for viz_name, viz_path in section.visualizations.items():
+                                for viz_name, viz_content in section.visualizations.items():
                                     try:
-                                        # Mostrar imagen de visualización
-                                        st.image(viz_path, caption=viz_name, use_column_width=True)
-                                    except:
-                                        st.warning(f"No se pudo cargar visualización: {viz_name}")
+                                        # CORRECCIÓN: Detectar tipo de visualización
+                                        if isinstance(viz_content, str):
+                                            if viz_content.startswith('data:text/html') or viz_content.startswith('<div'):
+                                                # Tarjeta moderna HTML
+                                                if viz_content.startswith('data:text/html'):
+                                                    import base64
+                                                    html_content = base64.b64decode(viz_content.split(',')[1]).decode('utf-8')
+                                                else:
+                                                    html_content = viz_content
+                                                st.markdown(f"##### 🎨 {viz_name.replace('_', ' ').title()}")
+                                                st.components.v1.html(html_content, height=400, scrolling=True)
+                                            else:
+                                                # Imagen tradicional
+                                                st.image(viz_content, caption=viz_name, use_column_width=True)
+                                        else:
+                                            st.image(viz_content, caption=viz_name, use_column_width=True)
+                                    except Exception as e:
+                                        st.warning(f"No se pudo cargar visualización: {viz_name} - {e}")
                             elif isinstance(section.visualizations, list):
                                 for i, viz_data in enumerate(section.visualizations):
                                     try:
-                                        # Mostrar imagen de visualización (base64)
-                                        st.image(viz_data, caption=f"Visualización {i+1}", use_column_width=True)
-                                    except:
-                                        st.warning(f"No se pudo cargar visualización {i+1}")
+                                        # CORRECCIÓN: Detectar tipo de visualización
+                                        if isinstance(viz_data, str):
+                                            if viz_data.startswith('data:text/html') or viz_data.startswith('<div'):
+                                                # Tarjeta moderna HTML
+                                                if viz_data.startswith('data:text/html'):
+                                                    import base64
+                                                    html_content = base64.b64decode(viz_data.split(',')[1]).decode('utf-8')
+                                                else:
+                                                    html_content = viz_data
+                                                st.markdown(f"##### 🎨 Visualización {i+1}")
+                                                st.components.v1.html(html_content, height=400, scrolling=True)
+                                            else:
+                                                # Imagen tradicional
+                                                st.image(viz_data, caption=f"Visualización {i+1}", use_column_width=True)
+                                        else:
+                                            st.image(viz_data, caption=f"Visualización {i+1}", use_column_width=True)
+                                    except Exception as e:
+                                        st.warning(f"No se pudo cargar visualización {i+1} - {e}")
             
             # Visualizaciones avanzadas principales
             if include_charts:
@@ -920,11 +948,39 @@ def generate_intelligent_report(report_generator, report_type, all_data, devices
                     
                 # Mostrar gráficos principales del reporte si existen
                 if hasattr(report_result, 'visualizations') and report_result.visualizations:
-                    for viz_name, viz_path in report_result.visualizations.items():
+                    for viz_name, viz_content in report_result.visualizations.items():
                         try:
-                            st.image(viz_path, caption=viz_name, use_column_width=True)
-                        except:
-                            st.warning(f"No se pudo cargar visualización: {viz_name}")
+                            # CORRECCIÓN: Detectar si es HTML (tarjetas modernas) o imagen
+                            if isinstance(viz_content, str):
+                                if viz_content.startswith('data:text/html'):
+                                    # Es una tarjeta moderna HTML en base64
+                                    import base64
+                                    # Extraer el HTML del base64
+                                    html_content = base64.b64decode(viz_content.split(',')[1]).decode('utf-8')
+                                    st.markdown(f"#### 🎨 {viz_name.replace('_', ' ').title()}")
+                                    st.components.v1.html(html_content, height=400, scrolling=True)
+                                
+                                elif viz_content.startswith('<div') or viz_content.startswith('<html'):
+                                    # Es HTML directo (tarjeta moderna)
+                                    st.markdown(f"#### 🎨 {viz_name.replace('_', ' ').title()}")
+                                    st.components.v1.html(viz_content, height=400, scrolling=True)
+                                
+                                elif viz_content.startswith('data:image') or viz_content.endswith('.png') or viz_content.endswith('.jpg'):
+                                    # Es una imagen (gráfico tradicional)
+                                    st.image(viz_content, caption=viz_name, use_column_width=True)
+                                
+                                else:
+                                    # Fallback: intentar mostrar como imagen
+                                    st.image(viz_content, caption=viz_name, use_column_width=True)
+                            else:
+                                # Contenido no string, intentar mostrar como imagen
+                                st.image(viz_content, caption=viz_name, use_column_width=True)
+                                
+                        except Exception as viz_error:
+                            st.warning(f"⚠️ No se pudo cargar visualización {viz_name}: {viz_error}")
+                            # Debug info para desarrolladores
+                            if isinstance(viz_content, str):
+                                st.text(f"Formato detectado: {viz_content[:100]}...")
             
             # Insights y recomendaciones generales
             if hasattr(report_result, 'insights') and report_result.insights:
