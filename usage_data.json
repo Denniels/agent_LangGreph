@@ -1,15 +1,15 @@
 {
-  "last_reset_date": "2025-10-22",
+  "last_reset_date": "2025-10-29",
   "daily_usage": {
     "llama-3.1-8b-instant": {
       "requests": 2,
-      "tokens": 1070,
-      "last_request": "2025-10-22T20:41:16.120887"
+      "tokens": 599,
+      "last_request": "2025-10-29T16:18:35.204258"
     }
   },
   "total_lifetime": {
     "requests": 2,
-    "tokens": 1070,
+    "tokens": 599,
     "days_active": 0
   }
 }
