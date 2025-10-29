@@ -19,6 +19,11 @@ from modules.tools.direct_jetson_connector import DirectJetsonConnector
 from modules.agents.direct_api_agent import create_direct_api_agent
 from modules.agents.langgraph_state import IoTAgentState, create_initial_state
 from modules.utils.usage_tracker import usage_tracker
+from modules.utils.intelligent_prompt_generator import (
+    create_intelligent_prompt, 
+    should_generate_visualization, 
+    filter_visualization_data
+)
 
 # LangGraph imports
 from langgraph.graph import StateGraph, END
@@ -752,37 +757,37 @@ class CloudIoTAgent:
                     user_query, formatted_data, comprehensive_analysis, raw_data, sensor_summary
                 )
             
-            # 2. GENERAR VISUALIZACIONES INTELIGENTES SI ES NECESARIO
+            # 2. GENERAR VISUALIZACIONES INTELIGENTES SOLO SI ES NECESARIO
             chart_paths = []
             visualization_info = ""
             
-            if self.intelligence_systems.get('visualization_engine'):
+            # Verificar si la consulta requiere visualización
+            requires_visualization = should_generate_visualization(user_query)
+            
+            if requires_visualization and self.intelligence_systems.get('visualization_engine'):
                 try:
                     # Usar AdvancedVisualizationEngine para generar gráficos inteligentes
                     raw_data = state.get("raw_data", [])
                     if raw_data:
+                        # Filtrar datos si es consulta temporal específica
+                        filtered_data = filter_visualization_data(raw_data, user_query)
+                        
                         chart_result = self.intelligence_systems['visualization_engine'].generate_intelligent_visualizations(
-                            raw_data, user_query, comprehensive_analysis
+                            filtered_data, user_query, comprehensive_analysis
                         )
                         if chart_result.get('charts'):
                             chart_paths = chart_result['charts']
                             visualization_info = chart_result.get('description', '')
-                            logger.info(f"🧠 AdvancedVisualizationEngine generó {len(chart_paths)} visualizaciones")
+                            logger.info(f"🧠 AdvancedVisualizationEngine generó {len(chart_paths)} visualizaciones específicas")
                 except Exception as e:
                     logger.warning(f"⚠️ AdvancedVisualizationEngine falló: {e}")
-                    # Fallback al motor de visualización básico
-                    if self.visualization_engine:
-                        try:
-                            should_generate = self.visualization_engine.should_generate_charts(user_query)
-                            if should_generate:
-                                raw_data = state.get("raw_data", [])
-                                if raw_data:
-                                    chart_base64_list = self.visualization_engine.generate_charts(raw_data, user_query)
-                                    if chart_base64_list:
-                                        chart_paths = chart_base64_list
-                                        visualization_info = f"Generados {len(chart_base64_list)} gráficos"
-                        except Exception as e2:
-                            logger.warning(f"⚠️ Motor de visualización básico también falló: {e2}")
+            else:
+                logger.info(f"📊 Visualización no requerida para consulta: '{user_query}'")
+                
+            # Si NO se solicitó gráfico, asegurar que no se genere ninguno
+            if not requires_visualization:
+                chart_paths = []
+                visualization_info = ""
             
             # 3. GENERAR RESPUESTA FINAL CON GROQ + IA MEJORADA
             if intelligent_response:
@@ -803,35 +808,14 @@ class CloudIoTAgent:
                     logger.info(f"📤 DATOS PARA GROQ - Registros: {comprehensive_analysis.get('total_records', 0)}")
                     logger.info(f"📤 DATOS PARA GROQ - Longitud intelligent_response: {len(intelligent_response)} chars")
                     
-                    # Crear prompt mejorado para Groq usando la respuesta inteligente
-                    enhanced_prompt = f"""
-Eres un asistente especializado en análisis de sistemas IoT. El usuario te ha hecho una consulta sobre su sistema IoT y tienes acceso a análisis detallado de datos REALES.
-
-CONSULTA DEL USUARIO: "{user_query}"
-
-DATOS REALES DEL SISTEMA IoT:
-{intelligent_response}
-
-ANÁLISIS TÉCNICO DISPONIBLE:
-- Dispositivos monitoreados: {comprehensive_analysis.get('device_analysis', {}).get('total_devices', 0)} activos
-- Sensores funcionando: {comprehensive_analysis.get('device_analysis', {}).get('total_sensors', 0)} tipos
-- Registros procesados: {comprehensive_analysis.get('total_records', 0)} entradas de datos
-- Estado del sistema: OPERATIVO y reportando datos en tiempo real
-{f"- Visualizaciones disponibles: {visualization_info}" if visualization_info else ""}
-
-INSTRUCCIONES PARA TU RESPUESTA:
-1. Lee cuidadosamente los DATOS REALES del sistema IoT arriba
-2. Responde ESPECÍFICAMENTE a la consulta del usuario usando SOLO los datos reales proporcionados
-3. NO inventes información - usa únicamente los datos del análisis
-4. Si el usuario pregunta por dispositivos/sensores, menciona los nombres exactos que aparecen en los datos
-5. Si pregunta por estadísticas, usa las cifras exactas del análisis
-6. Sé conversacional pero preciso, mostrando que entiendes los datos específicos
-7. Si no tienes información específica sobre algo, di claramente que necesitas más datos
-
-IMPORTANTE: Los datos arriba son REALES de un sistema IoT funcionando. No digas "no hay datos" si los datos están claramente mostrados arriba.
-
-RESPONDE DE FORMA CONVERSACIONAL Y ÚTIL:
-"""
+                    # CREAR PROMPT INTELIGENTE ESPECÍFICO PARA LA CONSULTA
+                    enhanced_prompt = create_intelligent_prompt(
+                        user_query, 
+                        intelligent_response,
+                        comprehensive_analysis,
+                        statistical_analysis,
+                        state.get("raw_data", [])
+                    )
                     
                     # Generar respuesta mejorada con Groq
                     groq_response = self.groq_integration.generate_response(enhanced_prompt, model=self.groq_model)
