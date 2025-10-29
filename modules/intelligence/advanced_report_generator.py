@@ -728,7 +728,7 @@ class AdvancedReportGenerator:
         return visualizations
     
     async def _create_temporal_trends_chart(self, df: pd.DataFrame) -> Optional[str]:
-        """Crea gráficos de tendencias temporales individuales por sensor"""
+        """Crea tarjetas individuales por sensor con estadísticas y serie temporal"""
         try:
             df['timestamp'] = pd.to_datetime(df['timestamp'])
             
@@ -736,17 +736,22 @@ class AdvancedReportGenerator:
             sensors = df['sensor_type'].unique()
             num_sensors = len(sensors)
             
-            # Crear subplots - tarjetas individuales por sensor
-            cols = min(3, num_sensors)  # Máximo 3 columnas
-            rows = (num_sensors + cols - 1) // cols  # Calcular filas necesarias
+            if num_sensors == 0:
+                return None
+            
+            # Crear subplots - tarjetas individuales por sensor (2 columnas máximo)
+            cols = min(2, num_sensors)
+            rows = (num_sensors + cols - 1) // cols
             
             fig = make_subplots(
                 rows=rows, cols=cols,
-                subplot_titles=[f'📊 {sensor}' for sensor in sensors],
+                subplot_titles=[f'📊 Sensor: {sensor.title()}' for sensor in sensors],
                 shared_xaxes=False,
-                vertical_spacing=0.1,
+                vertical_spacing=0.15,
                 horizontal_spacing=0.1
             )
+            
+            colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
             
             # Crear una tarjeta por cada sensor
             for i, sensor in enumerate(sensors):
@@ -758,110 +763,109 @@ class AdvancedReportGenerator:
                 if len(sensor_data) == 0:
                     continue
                 
-                # Convertir valores a numérico
-                sensor_data['value'] = pd.to_numeric(sensor_data['value'], errors='coerce')
-                sensor_data = sensor_data.dropna(subset=['value'])
+                # Convertir valores a numérico de forma robusta
+                sensor_data['numeric_value'] = pd.to_numeric(sensor_data['value'], errors='coerce')
+                sensor_data = sensor_data.dropna(subset=['numeric_value'])
                 
                 if len(sensor_data) == 0:
                     continue
                 
-                # Agrupar por dispositivo para este sensor
-                devices = sensor_data['device_id'].unique()
+                # Obtener estadísticas para el sensor
+                mean_val = sensor_data['numeric_value'].mean()
+                std_val = sensor_data['numeric_value'].std()
+                min_val = sensor_data['numeric_value'].min() 
+                max_val = sensor_data['numeric_value'].max()
+                count_val = len(sensor_data)
                 
-                for j, device in enumerate(devices):
-                    device_sensor_data = sensor_data[sensor_data['device_id'] == device].sort_values('timestamp')
-                    
-                    if len(device_sensor_data) == 0:
-                        continue
-                    
-                    fig.add_trace(
-                        go.Scatter(
-                            x=device_sensor_data['timestamp'],
-                            y=device_sensor_data['value'],
-                            name=f'{device}',
-                            line=dict(color=self.color_palette[j % len(self.color_palette)]),
-                            mode='lines+markers',
-                            showlegend=(i == 0),  # Solo mostrar leyenda en el primer gráfico
-                            hovertemplate=f'<b>{device}</b><br>' +
-                                         f'Sensor: {sensor}<br>' +
-                                         'Valor: %{y:.2f}<br>' +
-                                         'Tiempo: %{x}<br>' +
-                                         '<extra></extra>'
-                        ),
-                        row=row, col=col
-                    )
+                # Preparar datos temporales ordenados
+                sensor_data = sensor_data.sort_values('timestamp')
                 
-                # Añadir estadísticas del sensor como anotación
-                sensor_values = sensor_data['value']
-                stats_text = f'📈 Promedio: {sensor_values.mean():.2f}<br>' + \
-                           f'📊 Min/Max: {sensor_values.min():.2f}/{sensor_values.max():.2f}<br>' + \
-                           f'📋 Registros: {len(sensor_values)}'
+                # Agregar serie temporal del sensor
+                fig.add_trace(
+                    go.Scatter(
+                        x=sensor_data['timestamp'],
+                        y=sensor_data['numeric_value'],
+                        name=f'{sensor}',
+                        line=dict(color=colors[i % len(colors)], width=2),
+                        mode='lines+markers',
+                        marker=dict(size=4),
+                        hovertemplate=f'<b>{sensor}</b><br>' +
+                                    'Tiempo: %{x}<br>' +
+                                    'Valor: %{y:.2f}<br>' +
+                                    f'Promedio: {mean_val:.2f}<br>' +
+                                    f'Min/Max: {min_val:.2f}/{max_val:.2f}<br>' +
+                                    '<extra></extra>',
+                        showlegend=False  # No mostrar leyenda para simplificar
+                    ),
+                    row=row, col=col
+                )
+                
+                # Agregar línea de promedio
+                fig.add_hline(
+                    y=mean_val, 
+                    line_dash="dash", 
+                    line_color="red",
+                    line_width=1,
+                    row=row, col=col
+                )
+                
+                # Agregar texto de estadísticas
+                stats_text = f'μ={mean_val:.1f} | σ={std_val:.1f}<br>Min={min_val:.1f} | Max={max_val:.1f}<br>N={count_val}'
+                
+                # Posición para la anotación (esquina superior derecha)
+                x_pos = sensor_data['timestamp'].iloc[-1] if len(sensor_data) > 0 else sensor_data['timestamp'].max()
+                y_pos = max_val if max_val > mean_val else mean_val + std_val
                 
                 fig.add_annotation(
+                    x=x_pos,
+                    y=y_pos,
                     text=stats_text,
-                    xref=f"x{i+1}", yref=f"y{i+1}",
-                    x=sensor_data['timestamp'].max(),
-                    y=sensor_values.max(),
                     showarrow=False,
-                    bgcolor="rgba(255,255,255,0.8)",
+                    bgcolor="rgba(255,255,255,0.9)",
                     bordercolor="gray",
                     borderwidth=1,
-                    font=dict(size=10),
+                    font=dict(size=9, color="black"),
                     row=row, col=col
                 )
-            
-            fig.update_layout(
-                height=400 * rows,  # Altura dinámica basada en filas
-                title_text="📊 Evolución Temporal por Sensor IoT",
-                showlegend=True,
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom",
-                    y=1.02,
-                    xanchor="right",
-                    x=1
-                )
-            )
-            
-            # Actualizar ejes Y para cada subplot con unidades apropiadas
-            for i, sensor in enumerate(sensors):
-                row = i // cols + 1
-                col = i % cols + 1
                 
-                # Determinar unidad basada en el tipo de sensor
-                unit = ""
-                if "temperature" in sensor.lower():
-                    unit = "°C"
-                elif "ldr" in sensor.lower():
-                    unit = "lux"
-                elif "ntc" in sensor.lower():
-                    unit = "°C"
-                
-                fig.update_yaxes(
-                    title_text=f"Valor ({unit})" if unit else "Valor",
-                    row=row, col=col
-                )
+                # Configurar ejes específicos para cada sensor
                 fig.update_xaxes(
                     title_text="Tiempo",
+                    showgrid=True,
+                    row=row, col=col
+                )
+                
+                # Configurar rango Y específico para este sensor (escala individual)
+                y_margin = std_val * 0.2 if std_val > 0 else (max_val - min_val) * 0.1
+                y_min = max(0, min_val - y_margin) if min_val >= 0 else min_val - y_margin
+                y_max = max_val + y_margin
+                
+                fig.update_yaxes(
+                    title_text=f"Valor",
+                    showgrid=True,
+                    range=[y_min, y_max],
                     row=row, col=col
                 )
             
+            # Configurar layout general
+            fig.update_layout(
+                height=300 * rows,  # Altura dinámica: 300px por fila
+                title_text="📊 Análisis Individual por Sensor",
+                showlegend=False,  # Sin leyenda para simplificar
+                plot_bgcolor='white',
+                paper_bgcolor='white'
+            )
+            
             # Convertir a base64
-            img_bytes = pio.to_image(fig, format="png", width=self.figure_width, height=400 * rows)
+            img_bytes = pio.to_image(fig, format="png", width=self.figure_width, height=300 * rows)
             img_base64 = base64.b64encode(img_bytes).decode()
             
             return f"data:image/png;base64,{img_base64}"
             
         except Exception as e:
-            logger.error(f"Error creando gráfico de tendencias temporales por sensor: {e}")
+            self.logger.error(f"Error creando gráfico de tendencias temporales: {e}")
             return None
-            
-            return img_base64
-            
-        except Exception as e:
-            self.logger.warning(f"⚠️ Error creando gráfico temporal: {e}")
-            return None
-    
+
     async def _create_statistical_analysis_chart(self, df: pd.DataFrame) -> Optional[str]:
         """Crea gráfico de análisis estadístico"""
         try:

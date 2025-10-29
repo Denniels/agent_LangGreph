@@ -828,12 +828,21 @@ def generate_intelligent_report(report_generator, report_type, all_data, devices
                         
                         # Mostrar visualizaciones de la sección
                         if hasattr(section, 'visualizations') and section.visualizations:
-                            for viz_name, viz_path in section.visualizations.items():
-                                try:
-                                    # Mostrar imagen de visualización
-                                    st.image(viz_path, caption=viz_name, use_column_width=True)
-                                except:
-                                    st.warning(f"No se pudo cargar visualización: {viz_name}")
+                            # Manejar tanto dict como list de visualizaciones
+                            if isinstance(section.visualizations, dict):
+                                for viz_name, viz_path in section.visualizations.items():
+                                    try:
+                                        # Mostrar imagen de visualización
+                                        st.image(viz_path, caption=viz_name, use_column_width=True)
+                                    except:
+                                        st.warning(f"No se pudo cargar visualización: {viz_name}")
+                            elif isinstance(section.visualizations, list):
+                                for i, viz_data in enumerate(section.visualizations):
+                                    try:
+                                        # Mostrar imagen de visualización (base64)
+                                        st.image(viz_data, caption=f"Visualización {i+1}", use_column_width=True)
+                                    except:
+                                        st.warning(f"No se pudo cargar visualización {i+1}")
             
             # Visualizaciones avanzadas principales
             if include_charts:
