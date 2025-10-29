@@ -728,55 +728,133 @@ class AdvancedReportGenerator:
         return visualizations
     
     async def _create_temporal_trends_chart(self, df: pd.DataFrame) -> Optional[str]:
-        """Crea gráfico de tendencias temporales"""
+        """Crea gráficos de tendencias temporales individuales por sensor"""
         try:
             df['timestamp'] = pd.to_datetime(df['timestamp'])
             
+            # Obtener sensores únicos
+            sensors = df['sensor_type'].unique()
+            num_sensors = len(sensors)
+            
+            # Crear subplots - tarjetas individuales por sensor
+            cols = min(3, num_sensors)  # Máximo 3 columnas
+            rows = (num_sensors + cols - 1) // cols  # Calcular filas necesarias
+            
             fig = make_subplots(
-                rows=2, cols=1,
-                subplot_titles=('Tendencias por Dispositivo', 'Variabilidad Temporal'),
-                shared_xaxes=True
+                rows=rows, cols=cols,
+                subplot_titles=[f'📊 {sensor}' for sensor in sensors],
+                shared_xaxes=False,
+                vertical_spacing=0.1,
+                horizontal_spacing=0.1
             )
             
-            # Tendencias por dispositivo
-            for i, device in enumerate(df['device_id'].unique()):
-                device_data = df[df['device_id'] == device].sort_values('timestamp')
+            # Crear una tarjeta por cada sensor
+            for i, sensor in enumerate(sensors):
+                row = i // cols + 1
+                col = i % cols + 1
                 
-                fig.add_trace(
-                    go.Scatter(
-                        x=device_data['timestamp'],
-                        y=device_data['value'],
-                        name=f'Dispositivo {device}',
-                        line=dict(color=self.color_palette[i % len(self.color_palette)]),
-                        mode='lines+markers'
-                    ),
-                    row=1, col=1
+                sensor_data = df[df['sensor_type'] == sensor].copy()
+                
+                if len(sensor_data) == 0:
+                    continue
+                
+                # Convertir valores a numérico
+                sensor_data['value'] = pd.to_numeric(sensor_data['value'], errors='coerce')
+                sensor_data = sensor_data.dropna(subset=['value'])
+                
+                if len(sensor_data) == 0:
+                    continue
+                
+                # Agrupar por dispositivo para este sensor
+                devices = sensor_data['device_id'].unique()
+                
+                for j, device in enumerate(devices):
+                    device_sensor_data = sensor_data[sensor_data['device_id'] == device].sort_values('timestamp')
+                    
+                    if len(device_sensor_data) == 0:
+                        continue
+                    
+                    fig.add_trace(
+                        go.Scatter(
+                            x=device_sensor_data['timestamp'],
+                            y=device_sensor_data['value'],
+                            name=f'{device}',
+                            line=dict(color=self.color_palette[j % len(self.color_palette)]),
+                            mode='lines+markers',
+                            showlegend=(i == 0),  # Solo mostrar leyenda en el primer gráfico
+                            hovertemplate=f'<b>{device}</b><br>' +
+                                         f'Sensor: {sensor}<br>' +
+                                         'Valor: %{y:.2f}<br>' +
+                                         'Tiempo: %{x}<br>' +
+                                         '<extra></extra>'
+                        ),
+                        row=row, col=col
+                    )
+                
+                # Añadir estadísticas del sensor como anotación
+                sensor_values = sensor_data['value']
+                stats_text = f'📈 Promedio: {sensor_values.mean():.2f}<br>' + \
+                           f'📊 Min/Max: {sensor_values.min():.2f}/{sensor_values.max():.2f}<br>' + \
+                           f'📋 Registros: {len(sensor_values)}'
+                
+                fig.add_annotation(
+                    text=stats_text,
+                    xref=f"x{i+1}", yref=f"y{i+1}",
+                    x=sensor_data['timestamp'].max(),
+                    y=sensor_values.max(),
+                    showarrow=False,
+                    bgcolor="rgba(255,255,255,0.8)",
+                    bordercolor="gray",
+                    borderwidth=1,
+                    font=dict(size=10),
+                    row=row, col=col
                 )
             
-            # Variabilidad por hora
-            df['hour'] = df['timestamp'].dt.hour
-            hourly_stats = df.groupby('hour')['value'].agg(['mean', 'std']).reset_index()
-            
-            fig.add_trace(
-                go.Scatter(
-                    x=hourly_stats['hour'],
-                    y=hourly_stats['mean'],
-                    error_y=dict(type='data', array=hourly_stats['std']),
-                    name='Promedio Horario',
-                    line=dict(color='red', width=3)
-                ),
-                row=2, col=1
-            )
-            
             fig.update_layout(
-                height=800,
-                title_text="Análisis de Tendencias Temporales",
-                showlegend=True
+                height=400 * rows,  # Altura dinámica basada en filas
+                title_text="📊 Evolución Temporal por Sensor IoT",
+                showlegend=True,
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1
+                )
             )
+            
+            # Actualizar ejes Y para cada subplot con unidades apropiadas
+            for i, sensor in enumerate(sensors):
+                row = i // cols + 1
+                col = i % cols + 1
+                
+                # Determinar unidad basada en el tipo de sensor
+                unit = ""
+                if "temperature" in sensor.lower():
+                    unit = "°C"
+                elif "ldr" in sensor.lower():
+                    unit = "lux"
+                elif "ntc" in sensor.lower():
+                    unit = "°C"
+                
+                fig.update_yaxes(
+                    title_text=f"Valor ({unit})" if unit else "Valor",
+                    row=row, col=col
+                )
+                fig.update_xaxes(
+                    title_text="Tiempo",
+                    row=row, col=col
+                )
             
             # Convertir a base64
-            img_bytes = pio.to_image(fig, format="png", width=self.figure_width, height=800)
+            img_bytes = pio.to_image(fig, format="png", width=self.figure_width, height=400 * rows)
             img_base64 = base64.b64encode(img_bytes).decode()
+            
+            return f"data:image/png;base64,{img_base64}"
+            
+        except Exception as e:
+            logger.error(f"Error creando gráfico de tendencias temporales por sensor: {e}")
+            return None
             
             return img_base64
             

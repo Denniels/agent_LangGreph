@@ -208,15 +208,16 @@ class DirectAPIAgent:
 
     def get_sensor_data_direct(self, device_id: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
-        Obtener datos de un dispositivo específico (FALLBACK con límite de 10)
+        Obtener datos de un dispositivo específico usando filtros en endpoint principal
         
         Args:
             device_id: ID del dispositivo  
-            limit: Número de registros a obtener (máximo funcional: 10)
+            limit: Número de registros a obtener
         """
         try:
-            url = f"{self.base_url}/data/{device_id}"
-            params = {'limit': limit}
+            # Usar endpoint principal con filtros por dispositivo
+            url = f"{self.base_url}/data"
+            params = {'limit': limit * 2, 'device_id': device_id}  # x2 para tener margen
             
             logger.info(f"📡 GET {url} con params: {params}")
             
@@ -228,8 +229,12 @@ class DirectAPIAgent:
             # Extraer los datos correctamente del formato de respuesta de la API
             if isinstance(response_data, dict):
                 if 'data' in response_data and isinstance(response_data['data'], list):
-                    data = response_data['data']
-                    logger.info(f"✅ Datos extraídos del campo 'data' para {device_id}: {len(data)} registros")
+                    all_data = response_data['data']
+                    # Filtrar por device_id específico
+                    device_data = [record for record in all_data if record.get('device_id') == device_id]
+                    # Limitar a los registros solicitados
+                    data = device_data[:limit]
+                    logger.info(f"✅ Datos filtrados para {device_id}: {len(data)} registros de {len(all_data)} totales")
                 else:
                     logger.warning(f"⚠️ Respuesta inesperada de API para {device_id}: {response_data}")
                     data = []
@@ -238,7 +243,7 @@ class DirectAPIAgent:
                 data = response_data
                 logger.info(f"✅ Datos obtenidos directamente para {device_id}: {len(data)} registros")
             else:
-                logger.error(f"❌ Formato de respuesta no válido para {device_id}: {type(response_data)}")
+                logger.warning(f"⚠️ Respuesta no es dict para {device_id}: {type(response_data)}")
                 data = []
             
             return data

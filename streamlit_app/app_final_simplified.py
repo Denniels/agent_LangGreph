@@ -420,10 +420,25 @@ def display_system_status():
         health_col1, health_col2, health_col3, health_col4 = st.columns(4)
         
         with health_col1:
-            active_devices = sum(1 for d in device_status.values() if d['active'])
-            total_devices = len(device_status)
-            health_pct = (active_devices / total_devices * 100) if total_devices > 0 else 0
-            st.metric("📱 Salud Dispositivos", f"{health_pct:.0f}%", f"{active_devices}/{total_devices}")
+            # Usar análisis inteligente para determinar salud del sistema
+            try:
+                from modules.intelligence.smart_analyzer import SmartAnalyzer
+                analyzer = SmartAnalyzer()
+                analysis_data = analyzer.analyze_iot_data(
+                    device_status, 
+                    list(device_status.keys()), 
+                    sum(d['sensors_count'] for d in device_status.values())
+                )
+                # Obtener puntuación de salud del análisis inteligente
+                health_pct = analysis_data.get('health_score', 85.0)
+                confidence = analysis_data.get('confidence_score', 100.0)
+                st.metric("🏥 Salud del Sistema", f"{health_pct:.0f}%", f"Confianza: {confidence:.0f}%")
+            except Exception as e:
+                # Fallback al cálculo simple
+                active_devices = sum(1 for d in device_status.values() if d['active'])
+                total_devices = len(device_status)
+                health_pct = (active_devices / total_devices * 100) if total_devices > 0 else 0
+                st.metric("📱 Salud Dispositivos", f"{health_pct:.0f}%", f"{active_devices}/{total_devices}")
         
         with health_col2:
             st.metric("📊 Datos Recientes", total_records, "Últimos 30 min")
@@ -539,9 +554,10 @@ def generate_charts_if_needed(prompt, response_text, analysis_hours):
     try:
         chart_keywords = [
             'grafica', 'gráfica', 'grafico', 'gráfico', 'visualizar', 'chart', 'plot',
-            'estadistica', 'estadística', 'analisis', 'análisis', 'tendencia', 'evolution',
-            'temperatura', 'luminosidad', 'sensor', 'datos', 'registros', 'ultimas', 'últimas',
-            'avanzada', 'detallado', 'completo', 'resumen', 'metrica', 'métrica'
+            'estadistica visual', 'estadística visual', 'análisis visual', 'análisis gráfico',
+            'muestra gráfico', 'muestra grafico', 'mostrar gráfico', 'mostrar grafico',
+            'generar gráfico', 'generar grafico', 'crear gráfico', 'crear grafico',
+            'tendencias gráficas', 'evolución gráfica', 'gráficos de', 'graficos de'
         ]
         
         needs_charts = any(keyword in prompt.lower() for keyword in chart_keywords)
